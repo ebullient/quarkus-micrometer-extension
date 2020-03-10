@@ -53,11 +53,11 @@
   <dependencyManagement>
     <dependencies>
 
-      <!-- Quarkus -->
+      <!-- Quarkus Build Parent / BOM -->
 
       <dependency>
         <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-bom</artifactId>
+        <artifactId>quarkus-build-parent</artifactId>
         <version>${quarkus.version}</version>
         <type>pom</type>
         <scope>import</scope>
