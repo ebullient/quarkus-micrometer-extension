@@ -28,7 +28,7 @@
     <micrometer.version>1.3.5</micrometer.version>
   </properties>
 
-  <name>Micrometer extension - Parent</name>
+  <name>Micrometer Quarkus extension - Parent</name>
 
   <packaging>pom</packaging>
   <modules>
@@ -36,6 +36,10 @@
     <module>runtime</module>
     <module>deployment</module>
 
+    <!-- Integration Tests -->
+    <module>integration-tests</module>
+
+    <!-- Build-free BOM -->
     <module>build/bom</module>
   </modules>
 </project>

@@ -30,10 +30,14 @@
   <artifactId>quarkus-micrometer-build</artifactId>
 
   <name>quarkus-micrometer-build</name>
-  <description>Micrometer extension - build</description>
+  <description>Micrometer Quarkus extension - build</description>
   <packaging>pom</packaging>
 
   <properties>
+    <revision>0.0.1-SNAPSHOT</revision>
+    <quarkus.version>1.2.1.Final</quarkus.version>
+    <micrometer.version>1.3.5</micrometer.version>
+
     <compiler-plugin.version>3.8.1</compiler-plugin.version>
 
     <maven.compiler.parameters>true</maven.compiler.parameters>
@@ -68,6 +72,12 @@
       <dependency>
         <groupId>io.micrometer</groupId>
         <artifactId>micrometer-core</artifactId>
+        <version>${micrometer.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-registry-prometheus</artifactId>
         <version>${micrometer.version}</version>
       </dependency>
 

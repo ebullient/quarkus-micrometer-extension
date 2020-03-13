@@ -25,51 +25,44 @@
     <relativePath>../build/pom.xml</relativePath>
   </parent>
 
-  <artifactId>quarkus-micrometer-deployment</artifactId>
+  <artifactId>quarkus-micrometer-integration-tests</artifactId>
 
-  <name>Micrometer Quarkus extension - Deployment</name>
+  <name>Micrometer Quarkus extension - Integration Tests</name>
+  <description>Micrometer Quarkus extension integration tests module</description>
+  <packaging>pom</packaging>
 
-  <properties>
-    <!-- The following is set by mvnw in the parent (usually), but if you don't use mvnw... -->
-    <maven.multiModuleProjectDirectory>../</maven.multiModuleProjectDirectory>
-  </properties>
+  <modules>
+    <module>prometheus</module>
+  </modules>
 
   <dependencies>
+
+    <!-- JAX-RS -->
     <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>dev.ebullient</groupId>
-      <artifactId>quarkus-micrometer</artifactId>
-      <version>${project.version}</version>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-core-deployment</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-arc-deployment</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-vertx-http-deployment</artifactId>
+      <artifactId>quarkus-resteasy-jackson</artifactId>
     </dependency>
 
-    <!-- we need to find/replace smallrye metrics references. Start with MetricsBuildItem -->
+    <!-- Test Dependencies -->
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-smallrye-metrics-spi</artifactId>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/io.quarkus/quarkus-junit5-internal -->
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-junit5-internal</artifactId>
+      <artifactId>quarkus-junit5</artifactId>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.logging</groupId>
+      <artifactId>commons-logging-jboss-logging</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
 </project>

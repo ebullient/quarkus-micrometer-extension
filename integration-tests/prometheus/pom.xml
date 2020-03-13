@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.ebullient</groupId>
+    <artifactId>quarkus-micrometer-integration-tests</artifactId>
+    <version>${revision}</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <properties>
+    <!-- The following is set by mvnw in the parent (usually), but if you don't use mvnw... -->
+    <maven.multiModuleProjectDirectory>../../</maven.multiModuleProjectDirectory>
+  </properties>
+
+  <artifactId>quarkus-micrometer-integration-tests-prometheus</artifactId>
+
+  <name>Micrometer Quarkus extension - Prometheus Integration Tests</name>
+  <description>Micrometer Quarkus extension integration tests for Prometheus</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.ebullient</groupId>
+      <artifactId>quarkus-micrometer</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+  </dependencies>
+
+</project>
