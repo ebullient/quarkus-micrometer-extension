@@ -35,7 +35,6 @@
   </properties>
 
   <dependencies>
-
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-core</artifactId>
@@ -50,10 +49,17 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-vertx-http</artifactId>
     </dependency>
-    <!-- <dependency>
-      <groupId>org.eclipse.microprofile.metrics</groupId>
-      <artifactId>microprofile-metrics-api</artifactId>
-    </dependency> -->
+
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>
