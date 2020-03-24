@@ -1,14 +1,14 @@
 package dev.ebullient.micrometer.deployment;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.jboss.jandex.DotName;
-import org.jboss.jandex.Indexer;
 import org.jboss.logging.Logger;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
+import dev.ebullient.micrometer.runtime.ClockProvider;
+import dev.ebullient.micrometer.runtime.CompositeMeterRegistryProvider;
+import dev.ebullient.micrometer.runtime.NoopMeterRegistryProvider;
+import dev.ebullient.micrometer.runtime.PrometheusMeterRegistryProvider;
+import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
@@ -25,20 +25,41 @@ class MicrometerProcessor {
 
     // @BuildStep
     // public CapabilityBuildItem capability() {
-    //     return new CapabilityBuildItem(Capabilities.METRICS);
+    // return new CapabilityBuildItem(Capabilities.METRICS);
     // }
 
     @BuildStep
-    void build(CombinedIndexBuildItem combinedIndexBuildItem,
-            BuildProducer<GeneratedBeanBuildItem> generatedBeans) {
+    void registerAdditionalBeans(CombinedIndexBuildItem index,
+            BuildProducer<AdditionalBeanBuildItem> additionalBeans,
+            BuildProducer<UnremovableBeanBuildItem> unremovableBean) {
 
-        System.out.println("I AM HERE");
+        // CDI Provider that will create/inject default No-Op Micrometer instance
+        additionalBeans.produce(new AdditionalBeanBuildItem(ClockProvider.class));
 
-        ClassLoader classloader = MeterRegistry.class.getClassLoader();
-        Indexer indexer = new Indexer();
-        Set<DotName> additionalIndex = new HashSet<>();
+        boolean useNoopRegistry = true;
 
-        // CompositeIndex compositeIndex = CompositeIndex.create(combinedIndexBuildItem, indexer.complete());
+        if (isInClasspath(MicrometerDotNames.PROMETHEUS_REGISTRY)) {
+            useNoopRegistry = false;
+            // CDI Provider that will create/inject default Micrometer instances
+            //additionalBeans.produce(new AdditionalBeanBuildItem(MicrometerProvider.class));
+            System.out.println("PROM ON THE CLASSPATH");
+            additionalBeans.produce(new AdditionalBeanBuildItem(PrometheusMeterRegistryProvider.class));
+        }
+
+        if (useNoopRegistry) {
+            // CDI Provider that will create/inject default No-Op Micrometer instance
+            additionalBeans.produce(new AdditionalBeanBuildItem(NoopMeterRegistryProvider.class));
+        } else {
+            additionalBeans.produce(new AdditionalBeanBuildItem(CompositeMeterRegistryProvider.class));
+        }
     }
 
+    private static boolean isInClasspath(DotName classname) {
+        try {
+            Class.forName(classname.toString());
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
 }

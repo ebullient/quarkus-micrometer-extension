@@ -4,9 +4,13 @@ import org.jboss.jandex.DotName;
 
 public class MicrometerDotNames {
 
+    public static final DotName CLOCK = DotName
+            .createSimple("io.micrometer.core.instrument.Clock");
+
     public static final DotName METER_REGISTRY = DotName
             .createSimple("io.micrometer.core.instrument.MeterRegistry");
-
+    public static final DotName COMPOSITE_METER_REGISTRY = DotName
+            .createSimple("io.micrometer.core.instrument.composite.CompositeMeterRegistry");
     public static final DotName PROMETHEUS_REGISTRY = DotName
             .createSimple("io.micrometer.prometheus.PrometheusMeterRegistry");
     public static final DotName PROMETHEUS_CONFIG = DotName

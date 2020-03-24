@@ -11,7 +11,7 @@
   </parent>
 
   <properties>
-    <!-- The following is set by mvnw in the parent (usually), but if you don't use mvnw... -->
+    <!-- The following is set by mvnw, but if you forget to use mvnw... -->
     <maven.multiModuleProjectDirectory>../../</maven.multiModuleProjectDirectory>
   </properties>
 
