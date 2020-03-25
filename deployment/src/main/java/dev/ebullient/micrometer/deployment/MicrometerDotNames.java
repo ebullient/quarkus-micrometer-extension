@@ -9,6 +9,11 @@ public class MicrometerDotNames {
 
     public static final DotName METER_REGISTRY = DotName
             .createSimple("io.micrometer.core.instrument.MeterRegistry");
+    public static final DotName METER_BINDER = DotName
+            .createSimple("io.micrometer.core.instrument.binder.MeterBinder");
+    public static final DotName METER_FILTER = DotName
+            .createSimple("io.micrometer.core.instrument.config.MeterFilter");
+
     public static final DotName COMPOSITE_METER_REGISTRY = DotName
             .createSimple("io.micrometer.core.instrument.composite.CompositeMeterRegistry");
     public static final DotName PROMETHEUS_REGISTRY = DotName

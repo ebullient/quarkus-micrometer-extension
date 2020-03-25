@@ -17,12 +17,21 @@ import io.quarkus.test.junit.QuarkusTest;
 class PrometheusMetricsRegistryTest {
 
     @Test
-    void testEndpoint() {
+    void testRegistryInjection() {
         given()
                 .when().get("/message")
                 .then()
-                .statusCode(400)
-                .body(containsString("Test"));
+                .statusCode(200)
+                .body(containsString("io.micrometer.prometheus.PrometheusMeterRegistry"));
     }
 
+    @Test
+    void testPrometheusScrapeEndpoint() {
+        // default config
+        given()
+                .when().get("/prometheus")
+                .then()
+                .statusCode(200)
+                .log().all();
+    }
 }

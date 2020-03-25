@@ -16,7 +16,6 @@ public class NoopMeterRegistryProvider {
     @Singleton
     @DefaultBean
     public MeterRegistry registry(Clock clock) {
-        System.out.println("NO_OP MONSTER");
         return new CompositeMeterRegistry(clock);
     }
 }

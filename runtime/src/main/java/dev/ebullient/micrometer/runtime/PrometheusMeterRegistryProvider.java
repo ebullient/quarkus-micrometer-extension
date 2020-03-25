@@ -17,7 +17,6 @@ public class PrometheusMeterRegistryProvider {
     @Singleton
     @DefaultBean
     public PrometheusConfig config() {
-        System.out.println("DEFAULT PROM CONFIG MONSTER");
         return PrometheusConfig.DEFAULT;
     }
 

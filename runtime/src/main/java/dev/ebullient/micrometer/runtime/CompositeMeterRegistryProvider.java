@@ -5,18 +5,23 @@ import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
+import javax.interceptor.Interceptor;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.quarkus.arc.AlternativePriority;
 
 @ApplicationScoped
 public class CompositeMeterRegistryProvider {
 
     @Produces
     @Singleton
-    public MeterRegistry registry(Clock clock, @Any Instance<MeterRegistry> registries) {
-        System.out.println("REGISTRY MONSTER");
-        return new CompositeMeterRegistry(clock, registries);
+    @AlternativePriority(Interceptor.Priority.PLATFORM_AFTER)
+    public CompositeMeterRegistry registry(Clock clock, @Any Instance<MeterRegistry> registries) {
+        for (MeterRegistry r : registries) {
+            System.out.println(r);
+        }
+        return new CompositeMeterRegistry(clock);
     }
 }

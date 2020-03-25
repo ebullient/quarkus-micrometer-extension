@@ -14,7 +14,6 @@ public class ClockProvider {
     @Singleton
     @DefaultBean
     public Clock clock() {
-        System.out.println("CLOCK MONSTER");
         return Clock.SYSTEM;
     }
 }
