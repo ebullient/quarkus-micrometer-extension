@@ -29,7 +29,6 @@ public class MicrometerRecorder {
 
     public void configureRegistry() {
         MeterRegistry registry = CDI.current().select(MeterRegistry.class).get();
-        System.out.println("RUNTIME: " + registry);
 
         // Filters to change/constrain construction/output of metrics
         // Instance<MeterFilter> filters = CDI.current().select(MeterFilter.class, Any.Literal.INSTANCE);
