@@ -27,11 +27,11 @@ class PrometheusMetricsRegistryTest {
 
     @Test
     void testPrometheusScrapeEndpoint() {
-        // default config
         given()
                 .when().get("/prometheus")
                 .then()
                 .statusCode(200)
-                .log().all();
+                // .log().all()
+                .body(containsString("jvm_classes_loaded_classes"));
     }
 }
