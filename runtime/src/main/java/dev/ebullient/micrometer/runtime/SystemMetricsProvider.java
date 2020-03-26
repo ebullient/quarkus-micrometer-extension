@@ -1,6 +1,5 @@
 package dev.ebullient.micrometer.runtime;
 
-import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Default;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
@@ -9,7 +8,7 @@ import io.micrometer.core.instrument.binder.system.FileDescriptorMetrics;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.binder.system.UptimeMetrics;
 
-@ApplicationScoped
+@Singleton
 public class SystemMetricsProvider {
 
     @Produces

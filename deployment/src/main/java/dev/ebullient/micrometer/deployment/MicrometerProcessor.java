@@ -3,32 +3,45 @@ package dev.ebullient.micrometer.deployment;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 import static io.quarkus.deployment.annotations.ExecutionTime.STATIC_INIT;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BooleanSupplier;
 
-import org.jboss.jandex.ClassInfo;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Produces;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.interceptor.Interceptor.Priority;
+
 import org.jboss.jandex.DotName;
 
 import dev.ebullient.micrometer.runtime.ClockProvider;
-import dev.ebullient.micrometer.runtime.CompositeMeterRegistryProvider;
 import dev.ebullient.micrometer.runtime.JvmMetricsProvider;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.NoopMeterRegistryProvider;
 import dev.ebullient.micrometer.runtime.PrometheusMeterRegistryProvider;
 import dev.ebullient.micrometer.runtime.PrometheusScrapeHandler;
 import dev.ebullient.micrometer.runtime.SystemMetricsProvider;
+import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.quarkus.arc.AlternativePriority;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
+import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
+import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
-import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
-import io.quarkus.runtime.annotations.ConfigItem;
-import io.quarkus.runtime.annotations.ConfigRoot;
+import io.quarkus.gizmo.ClassCreator;
+import io.quarkus.gizmo.FieldCreator;
+import io.quarkus.gizmo.FieldDescriptor;
+import io.quarkus.gizmo.MethodCreator;
+import io.quarkus.gizmo.MethodDescriptor;
+import io.quarkus.gizmo.ResultHandle;
 import io.quarkus.vertx.http.deployment.HttpRootPathBuildItem;
 import io.quarkus.vertx.http.deployment.RouteBuildItem;
 import io.vertx.core.Handler;
@@ -37,114 +50,150 @@ import io.vertx.ext.web.RoutingContext;
 class MicrometerProcessor {
     private static final String FEATURE = "micrometer";
 
-    @ConfigRoot(name = "micrometer")
-    static final class MicrometerConfig {
-        /**
-         * Default path for the metrics handler
-         */
-        @ConfigItem(defaultValue = "/micrometer")
-        String path;
+    static class MicrometerEnabled implements BooleanSupplier {
+        MicrometerConfig mConfig;
+
+        public boolean getAsBoolean() {
+            return mConfig.enabled;
+        }
     }
 
-    @ConfigRoot(name = "micrometer-prometheus")
-    static final class PrometheusConfig {
-        /**
-         * Default path for the prometheus endpoint
-         */
-        @ConfigItem(defaultValue = "/prometheus")
-        String path;
+    static class PrometheusEnabled implements BooleanSupplier {
+        MicrometerConfig mConfig;
+        PrometheusConfig pConfig;
+
+        public boolean getAsBoolean() {
+            return mConfig.enabled && pConfig.enabled && isInClasspath(MicrometerDotNames.PROMETHEUS_REGISTRY);
+        }
     }
 
     MicrometerConfig mConfig;
     PrometheusConfig pConfig;
 
-    @BuildStep
+    @BuildStep(onlyIf = MicrometerEnabled.class)
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
     }
 
-    // @BuildStep
+    // @BuildStep(onlyIf = MicrometerEnabled.class)
     // public CapabilityBuildItem capability() {
     // return new CapabilityBuildItem(Capabilities.METRICS);
     // }
 
-    @BuildStep
-    void addInfinispanDependencies(BuildProducer<IndexDependencyBuildItem> indexDependency) {
+    @BuildStep(onlyIf = MicrometerEnabled.class)
+    void addMicrometerDependencies(BuildProducer<IndexDependencyBuildItem> indexDependency) {
         indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-core"));
         indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-prometheus"));
     }
 
-    @BuildStep
+    @BuildStep(onlyIf = MicrometerEnabled.class)
     void registerAdditionalBeans(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans,
-            BuildProducer<UnremovableBeanBuildItem> unremovableBean) {
+            BuildProducer<MicrometerRegistryProviderBuildItem> additionalRegistryProviders) {
 
         System.out.println(index.getIndex().getAllKnownSubclasses(MicrometerDotNames.METER_REGISTRY));
         System.out.println(index.getIndex().getAllKnownImplementors(MicrometerDotNames.METER_BINDER));
 
-        // CDI Provider that will create/inject default providers
-        additionalBeans.produce(new AdditionalBeanBuildItem(ClockProvider.class));
-
         // Create and keep JVM/System MeterBinders
-        additionalBeans.produce(new AdditionalBeanBuildItem(JvmMetricsProvider.class));
-        additionalBeans.produce(new AdditionalBeanBuildItem(SystemMetricsProvider.class));
-        unremovableBean.produce(new UnremovableBeanBuildItem(
-                new UnremovableBeanBuildItem.BeanClassNamesExclusion(new HashSet<>(Arrays.asList(
-                        JvmMetricsProvider.class.getName(),
-                        SystemMetricsProvider.class.getName())))));
+        additionalBeans.produce(AdditionalBeanBuildItem.builder()
+                .setUnremovable()
+                .addBeanClass(ClockProvider.class)
+                .addBeanClass(JvmMetricsProvider.class)
+                .addBeanClass(SystemMetricsProvider.class)
+                .build());
+        // Find customizers, binders, and custom provider registries
+    }
 
-        // Preserve MeterFilter beans
-        Collection<ClassInfo> filters = index.getIndex().getAllKnownImplementors(MicrometerDotNames.METER_FILTER);
-        filters.stream().forEach(System.out::println);
-        // unremovableBean.produce(new UnremovableBeanBuildItem(
-        //         new UnremovableBeanBuildItem.BeanClassNamesExclusion(new HashSet<String>(
-        //                 filters.stream()
-        //                         .map(ci -> ci.name().toString())
-        //                         .collect(Collectors.toSet())))));
+    @BuildStep(onlyIf = PrometheusEnabled.class)
+    void createPrometheusRegistry(CombinedIndexBuildItem index,
+            BuildProducer<AdditionalBeanBuildItem> additionalBeans,
+            BuildProducer<MicrometerRegistryProviderBuildItem> registryProviders) {
 
-        int numRegistries = 0;
+        // Initialize the Prometheus Registry Producer (and remember the
+        // PrometheusRegistry)
+        additionalBeans.produce(AdditionalBeanBuildItem.builder()
+                .addBeanClass(PrometheusMeterRegistryProvider.class)
+                .setUnremovable().build());
 
-        if (isInClasspath(MicrometerDotNames.PROMETHEUS_REGISTRY)) {
-            numRegistries++;
-            // CDI Provider that will create/inject Prometheus MeterRegistry
-            additionalBeans.produce(new AdditionalBeanBuildItem(PrometheusMeterRegistryProvider.class));
-        }
+        registryProviders.produce(new MicrometerRegistryProviderBuildItem(PrometheusMeterRegistry.class));
+    }
 
-        if (numRegistries == 0) {
-            // CDI Provider that will create/inject default No-Op Micrometer instance
-            additionalBeans.produce(new AdditionalBeanBuildItem(NoopMeterRegistryProvider.class));
-        } else if (numRegistries == 1) {
-            // Do nothing. The single registry above will be the registry. The end. ;)
-            // TEST: additionalBeans.produce(new AdditionalBeanBuildItem(CompositeMeterRegistryProvider.class));
-        } else if (numRegistries > 1) {
-            additionalBeans.produce(new AdditionalBeanBuildItem(CompositeMeterRegistryProvider.class));
+    @BuildStep(onlyIf = MicrometerEnabled.class)
+    void createRootRegistry(List<MicrometerRegistryProviderBuildItem> providerClasses,
+            BuildProducer<GeneratedBeanBuildItem> beanProducer,
+            BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
+
+        if (providerClasses.isEmpty()) {
+            additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable()
+                    .addBeanClass(NoopMeterRegistryProvider.class).build());
+        } else if (providerClasses.size() > 1) {
+            GeneratedBeanGizmoAdaptor gizmoAdaptor = new GeneratedBeanGizmoAdaptor(beanProducer);
+
+            String name = this.getClass().getPackage().getName() + ".CompositeMicrometerRegistryProvider";
+            try (ClassCreator classCreator = ClassCreator.builder().className(name).classOutput(gizmoAdaptor).build()) {
+                classCreator.addAnnotation(ApplicationScoped.class);
+
+                List<FieldDescriptor> listFields = new ArrayList<>();
+
+                int i = 0;
+                // create fields to allow all other known/enabled registry beans to be injected
+                for (MicrometerRegistryProviderBuildItem provider : providerClasses) {
+                    FieldCreator injected = classCreator.getFieldCreator("registry_" + i,
+                            provider.getProvidedRegistryClass().getName());
+                    injected.addAnnotation(Inject.class);
+                    injected.setModifiers(0);
+                    listFields.add(injected.getFieldDescriptor());
+                }
+
+                // @Produces
+                try (MethodCreator createCompositeRegistry = classCreator.getMethodCreator("createCompositeRegistry",
+                        MeterRegistry.class, Clock.class)) {
+                    createCompositeRegistry.addAnnotation(Produces.class);
+                    createCompositeRegistry.addAnnotation(Singleton.class);
+
+                    // The composite takes precedence over all registries
+                    createCompositeRegistry.addAnnotation(AlternativePriority.class).addValue("value",
+                            Priority.PLATFORM_AFTER);
+
+                    // create the composite registry
+                    ResultHandle compositeRegistry = createCompositeRegistry.newInstance(
+                            MethodDescriptor.ofConstructor(CompositeMeterRegistry.class, Clock.class),
+                            createCompositeRegistry.getMethodParam(0));
+
+                    // add injected registries to the composite
+                    MethodDescriptor addRegistry = MethodDescriptor.ofMethod(CompositeMeterRegistry.class, "add",
+                            CompositeMeterRegistry.class, MeterRegistry.class);
+                    for (FieldDescriptor fd : listFields) {
+                        ResultHandle arg = createCompositeRegistry.readInstanceField(fd, createCompositeRegistry.getThis());
+                        createCompositeRegistry.invokeVirtualMethod(addRegistry, compositeRegistry, arg);
+                    }
+
+                    // all done!
+                    createCompositeRegistry.returnValue(compositeRegistry);
+                }
+            }
         }
     }
 
-    @BuildStep
+    @BuildStep(onlyIf = PrometheusEnabled.class)
     @Record(STATIC_INIT)
-    void createRoute(BuildProducer<RouteBuildItem> routes,
-            HttpRootPathBuildItem httpRoot,
+    void createPrometheusRoute(BuildProducer<RouteBuildItem> routes, HttpRootPathBuildItem httpRoot,
             MicrometerRecorder recorder) {
 
         // set up prometheus scrape endpoint
-        if (isInClasspath(MicrometerDotNames.PROMETHEUS_REGISTRY)) {
-            Handler<RoutingContext> handler = new PrometheusScrapeHandler();
+        Handler<RoutingContext> handler = new PrometheusScrapeHandler();
 
-            // Exact match for resources matched to the root path
-            routes.produce(new RouteBuildItem(pConfig.path, handler));
+        // Exact match for resources matched to the root path
+        routes.produce(new RouteBuildItem(pConfig.path, handler));
 
-            // Match paths that begin with the deployment path
-            String matchPath = pConfig.path + (pConfig.path.endsWith("/") ? "*" : "/*");
-            routes.produce(new RouteBuildItem(matchPath, handler));
-        }
+        // Match paths that begin with the deployment path
+        String matchPath = pConfig.path + (pConfig.path.endsWith("/") ? "*" : "/*");
+        routes.produce(new RouteBuildItem(matchPath, handler));
     }
 
-    @BuildStep
+    @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(RUNTIME_INIT)
-    void configureRegistry(MicrometerRecorder recorder,
-            ShutdownContextBuildItem shutdown) {
-        // configure registry (with Binders)
+    void configureRegistry(MicrometerRecorder recorder) {
         recorder.configureRegistry();
     }
 
