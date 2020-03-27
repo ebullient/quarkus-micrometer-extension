@@ -16,9 +16,7 @@
   </properties>
 
   <artifactId>quarkus-micrometer-integration-tests-prometheus</artifactId>
-
   <name>Micrometer Quarkus extension - Prometheus Integration Tests</name>
-  <description>Micrometer Quarkus extension integration tests for Prometheus</description>
 
   <dependencies>
     <dependency>

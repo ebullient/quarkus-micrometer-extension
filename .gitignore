@@ -42,6 +42,7 @@ nb-configuration.xml
 
 # Maven
 target/
+.flattened*
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup

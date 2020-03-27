@@ -26,7 +26,6 @@
   </parent>
 
   <artifactId>quarkus-micrometer</artifactId>
-
   <name>Micrometer Quarkus extension - Runtime</name>
 
   <properties>

@@ -26,7 +26,6 @@
   </parent>
 
   <artifactId>quarkus-micrometer-deployment</artifactId>
-
   <name>Micrometer Quarkus extension - Deployment</name>
 
   <properties>
@@ -48,6 +47,7 @@
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
+      <optional>true</optional>
     </dependency>
 
     <dependency>
@@ -67,6 +67,7 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-metrics-spi</artifactId>
+      <optional>true</optional>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/io.quarkus/quarkus-junit5-internal -->
@@ -90,7 +91,5 @@
       <artifactId>rest-assured</artifactId>
       <scope>test</scope>
     </dependency>
-
   </dependencies>
-
 </project>
