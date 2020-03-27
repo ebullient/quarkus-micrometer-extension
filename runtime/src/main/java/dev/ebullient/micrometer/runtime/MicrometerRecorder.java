@@ -9,6 +9,7 @@ import javax.enterprise.inject.spi.CDI;
 import org.jboss.logging.Logger;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.quarkus.runtime.annotations.Recorder;
 import io.vertx.ext.web.Route;
@@ -37,5 +38,8 @@ public class MicrometerRecorder {
         // Binders must be last
         Instance<MeterBinder> binders = CDI.current().select(MeterBinder.class, Any.Literal.INSTANCE);
         binders.stream().forEach(binder -> binder.bindTo(registry));
+
+        // Add the current CDI root registry to the global composite
+        Metrics.addRegistry(registry);
     }
 }
