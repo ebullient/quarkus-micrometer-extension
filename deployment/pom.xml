@@ -21,7 +21,7 @@
   <parent>
     <groupId>dev.ebullient.quarkus-micrometer-extension</groupId>
     <artifactId>quarkus-micrometer-build</artifactId>
-    <version>${revision}</version>
+    <version>${revision}${changelist}</version>
     <relativePath>../build/pom.xml</relativePath>
   </parent>
 

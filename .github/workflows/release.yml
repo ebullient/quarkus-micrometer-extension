@@ -1,0 +1,31 @@
+name: Publish package to GitHub Packages
+on:
+  release:
+    types: [published]
+jobs:
+  publish:
+    if: "!github.event.release.prerelease"
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+      - name: Publish package
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          VERSION=$(./mvnw -B help:evaluate -Dexpression=project.version | grep -v INFO)
+          echo $VERSION
+          if [[ $VERSION == [.0-9]* ]]; then
+            mvn -B deploy
+          fi

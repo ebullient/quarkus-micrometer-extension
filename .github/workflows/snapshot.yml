@@ -1,4 +1,4 @@
-name: Publish package to GitHub Packages
+name: Update snapshot tag
 on:
   push:
     branches: [ master ]
@@ -14,12 +14,33 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-
       - uses: actions/setup-java@v1
         with:
           java-version: 1.8
 
-      - name: Publish package
-        run: mvn -B deploy -Prelease
+      - name: Build with Maven
+        run: |
+          ./mvnw -B help:evaluate -Dexpression=project.version | grep -v INFO
+          mvn -B clean verify
+
+      - name: Update tag
+        if: success()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JITPACK_TOKEN: ${{ secrets.JITPACK_TOKEN }}
+        shell: bash
+        run: |
+          VERSION=$(./mvnw -B help:evaluate -Dexpression=project.version | grep -v INFO)
+          echo $VERSION
+          if [[ $VERSION == [.0-9]*-SNAPSHOT ]]; then
+            git config user.name "${GITHUB_ACTOR}"
+            git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+            echo "Update tag for $VERSION"
+            git push origin :refs/tags/$VERSION
+            git tag -f $VERSION
+            git push --tags
+
+            echo "Delete JitPack artifacts for tag"
+            curl -X "DELETE" -u${JITPACK_TOKEN} https://jitpack.io/api/builds/dev.ebullient/quarkus-micrometer-extension/$VERSION
+          fi

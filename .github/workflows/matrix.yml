@@ -36,22 +36,13 @@ jobs:
       run: docker pull quay.io/quarkus/ubi-quarkus-native-image:${{ matrix.graal }}-java${{ matrix.java }}
 
     - name: Build with Maven
-      if: github.event_name == 'pull_request'
       run: |
-        echo This event is a pull request.
-        mvn -B clean verify
-
-    - name: Build with SNAPSHOT with maven
-      if: github.event_name == 'push'
-      run: |
-        echo This event is a push request.
-        mvn -B clean deploy -Prelease
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ./mvnw -B help:evaluate -Dexpression=project.version | grep -v INFO
+        ./mvnw -B clean verify
 
     - name: Native Quarkus build with maven
       if: success()
       run: |
-        mvn -B clean verify -Dnative -Dquarkus.native.container-build=true -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-native-image:${{ matrix.graal }}-java${{ matrix.java }}
+        ./mvnw -B clean verify -Dnative -Dquarkus.native.container-build=true -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-native-image:${{ matrix.graal }}-java${{ matrix.java }}
 
 

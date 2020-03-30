@@ -22,7 +22,7 @@
   <parent>
     <groupId>dev.ebullient.quarkus-micrometer-extension</groupId>
     <artifactId>quarkus-micrometer-parent</artifactId>
-    <version>${revision}</version>
+    <version>${revision}${changelist}</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -46,10 +46,8 @@
     <formatter-maven-plugin.version>2.11.0</formatter-maven-plugin.version>
     <impsort-maven-plugin.version>1.3.2</impsort-maven-plugin.version>
 
-    <maven-scm-plugin.version>1.9.4</maven-scm-plugin.version>
     <maven-source-plugin.version>3.0.1</maven-source-plugin.version>
     <maven-javadoc-plugin.version>3.1.0</maven-javadoc-plugin.version>
-    <flatten-maven-plugin.version>1.2.1</flatten-maven-plugin.version>
   </properties>
 
   <dependencyManagement>
@@ -287,44 +285,8 @@
               </execution>
             </executions>
           </plugin>
-
-          <plugin>
-            <artifactId>maven-scm-plugin</artifactId>
-            <version>${maven-scm-plugin.version}</version>
-            <configuration>
-              <tag>v${project.version}</tag>
-            </configuration>
-          </plugin>
-
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>flatten-maven-plugin</artifactId>
-            <version>${flatten-maven-plugin.version}</version>
-            <configuration>
-              <updatePomFile>true</updatePomFile>
-              <flattenMode>resolveCiFriendliesOnly</flattenMode>
-              <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
-            </configuration>
-            <executions>
-              <execution>
-                <id>flatten</id>
-                <phase>process-resources</phase>
-                <goals>
-                  <goal>flatten</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>flatten.clean</id>
-                <phase>clean</phase>
-                <goals>
-                  <goal>clean</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
         </plugins>
       </build>
     </profile>
-
   </profiles>
 </project>

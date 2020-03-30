@@ -6,7 +6,7 @@
   <parent>
     <groupId>dev.ebullient.quarkus-micrometer-extension</groupId>
     <artifactId>quarkus-micrometer-integration-tests</artifactId>
-    <version>${revision}</version>
+    <version>${revision}${changelist}</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -19,12 +19,6 @@
   <name>Micrometer Quarkus extension - Prometheus Integration Tests</name>
 
   <dependencies>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>quarkus-micrometer</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-core</artifactId>
