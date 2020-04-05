@@ -20,17 +20,23 @@ import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.NoopMeterRegistryProvider;
 import dev.ebullient.micrometer.runtime.PrometheusMeterRegistryProvider;
 import dev.ebullient.micrometer.runtime.PrometheusScrapeHandler;
+import dev.ebullient.micrometer.runtime.StackdriverConfig;
+import dev.ebullient.micrometer.runtime.StackdriverMeterRegistryProvider;
+import dev.ebullient.micrometer.runtime.StackdriverRecorder;
 import dev.ebullient.micrometer.runtime.SystemMetricsProvider;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.stackdriver.StackdriverMeterRegistry;
 import io.quarkus.arc.AlternativePriority;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.arc.deployment.BeanContainerListenerBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
@@ -66,6 +72,7 @@ class MicrometerProcessor {
     void addMicrometerDependencies(BuildProducer<IndexDependencyBuildItem> indexDependency) {
         indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-core"));
         indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-prometheus"));
+        indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-stackdriver"));
     }
 
     @BuildStep(onlyIf = MicrometerConfig.MicrometerEnabled.class)
@@ -95,6 +102,19 @@ class MicrometerProcessor {
 
         // Include the PrometheusMeterRegistry in a possible CompositeMeterRegistry
         return new MicrometerRegistryProviderBuildItem(PrometheusMeterRegistry.class);
+    }
+
+    @BuildStep(onlyIf = StackdriverConfig.StackdriverEnabled.class)
+    MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index,
+            BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
+
+        // Add the Stackdriver Registry Producer
+        additionalBeans.produce(AdditionalBeanBuildItem.builder()
+                .addBeanClass(StackdriverMeterRegistryProvider.class)
+                .setUnremovable().build());
+
+        // Include the StackdriverMeterRegistry in a possible CompositeMeterRegistry
+        return new MicrometerRegistryProviderBuildItem(StackdriverMeterRegistry.class);
     }
 
     @BuildStep(onlyIf = MicrometerConfig.MicrometerEnabled.class)
@@ -174,9 +194,22 @@ class MicrometerProcessor {
         routes.produce(new RouteBuildItem(matchPath, handler));
     }
 
+    @Record(ExecutionTime.STATIC_INIT)
+    @BuildStep(onlyIf = StackdriverConfig.StackdriverEnabled.class)
+    void setStackdriverConfig(StackdriverRecorder recorder,
+            StackdriverConfig stackdriverConfig,
+            BuildProducer<BeanContainerListenerBuildItem> containerListenerProducer) {
+
+        if (!stackdriverConfig.projectId.isPresent()) {
+            throw new RuntimeException("Project id has to be set for Stackdriver exporter.");
+        }
+        containerListenerProducer.produce(
+                new BeanContainerListenerBuildItem(recorder.setStackdriverConfig(stackdriverConfig)));
+    }
+
     @BuildStep(onlyIf = MicrometerConfig.MicrometerEnabled.class)
     @Record(RUNTIME_INIT)
-    void configureRegistry(MicrometerRecorder recorder) {
+    void configureRegistry(MicrometerRecorder recorder, StackdriverConfig stackdriverConfig) {
         recorder.configureRegistry();
     }
 

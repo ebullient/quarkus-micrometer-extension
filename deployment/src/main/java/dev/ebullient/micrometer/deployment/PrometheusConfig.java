@@ -27,7 +27,7 @@ final class PrometheusConfig {
     /**
      * If the prometheus endpoint is enabled.
      */
-    @ConfigItem(defaultValue = "true")
+    @ConfigItem(defaultValue = "false")
     public boolean enabled;
 
     @Override
