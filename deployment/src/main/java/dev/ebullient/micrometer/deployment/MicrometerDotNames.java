@@ -20,6 +20,10 @@ public class MicrometerDotNames {
             .createSimple("io.micrometer.prometheus.PrometheusMeterRegistry");
     public static final DotName PROMETHEUS_CONFIG = DotName
             .createSimple("io.micrometer.prometheus.PrometheusConfig");
+    public static final DotName STACKDRIVER_REGISTRY = DotName
+            .createSimple("io.micrometer.stackdriver.StackdriverMeterRegistry");
+    public static final DotName STACKDRIVER_CONFIG = DotName
+            .createSimple("package io.micrometer.stackdriver.StackdriverConfig");
 
     // public static final DotName METER_INTERFACE = DotName
     //         .createSimple(io.micrometer.core.instrument.Meter.class.getName());

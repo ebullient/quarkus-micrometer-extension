@@ -20,12 +20,7 @@ public class MicrometerRecorder {
     private static final Logger LOGGER = Logger.getLogger(MicrometerRecorder.class.getName());
 
     public Function<Router, Route> route(String name) {
-        return new Function<Router, Route>() {
-            @Override
-            public Route apply(Router router) {
-                return router.route(name);
-            }
-        };
+        return router -> router.route(name);
     }
 
     public void configureRegistry() {
