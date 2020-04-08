@@ -32,6 +32,6 @@ public class MicrometerDisabledTestCase {
     @Test
     public void testNoMeterRegistry() {
         //Should not be reached: dump what was injected if it somehow passed
-        Assertions.assertNull(registry, "A MeterRegistry should not be found/injected when micrometer is not enabled");
+        Assertions.assertNull(registry, "A MeterRegistry should not be found/injected when micrometer is disabled");
     }
 }

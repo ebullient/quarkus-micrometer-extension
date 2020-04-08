@@ -18,8 +18,11 @@ public class StackdriverEnabledTestCase {
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
-                    .addAsResource(new StringAsset("quarkus.micrometer.export.stackdriver.enabled=true\n"
-                            + "quarkus.micrometer.export.stackdriver.project-id=myproject"),
+                    .addClass(StackdriverMeterRegistry.class)
+                    .addAsResource(new StringAsset(
+                            "quarkus.micrometer.export.stackdriver.enabled=true\n"
+                                    + "quarkus.micrometer.registry-enabled-default=false\n"
+                                    + "quarkus.micrometer.export.stackdriver.project-id=myproject"),
                             "application.properties"));
 
     @Inject
@@ -27,9 +30,8 @@ public class StackdriverEnabledTestCase {
 
     @Test
     public void testMeterRegistryPresent() {
-        // Stackdriver is enabled.
+        // Stackdriver is enabled (alone, all others disabled)
         Assertions.assertNotNull(registry, "A registry should be configured");
         Assertions.assertTrue(registry instanceof StackdriverMeterRegistry, "Should be StackdriverMeterRegistry");
     }
-
 }

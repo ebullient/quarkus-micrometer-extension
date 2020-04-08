@@ -10,18 +10,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.stackdriver.StackdriverMeterRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.quarkus.test.QuarkusUnitTest;
 
-/**
- * Should not have any registered MeterRegistry objects when micrometer is disabled
- */
-public class StackdriverDisabledTestCase {
+public class PrometheusEnabledTestCase {
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
-                    .addAsResource(new StringAsset("quarkus.micrometer.export.stackdriver.enabled=false"),
+                    .addClass(PrometheusMeterRegistry.class)
+                    .addAsResource(new StringAsset(
+                            "quarkus.micrometer.export.prometheus.enabled=true\n"
+                                    + "quarkus.micrometer.registry-enabled-default=false"),
                             "application.properties"));
 
     @Inject
@@ -29,9 +29,8 @@ public class StackdriverDisabledTestCase {
 
     @Test
     public void testMeterRegistryPresent() {
-        // Micrometer is enabled, stackdriver is not.
+        // Prometheus is enabled (only registry)
         Assertions.assertNotNull(registry, "A registry should be configured");
-        Assertions.assertFalse(registry instanceof StackdriverMeterRegistry, "Should not be StackdriverMeterRegistry");
+        Assertions.assertTrue(registry instanceof PrometheusMeterRegistry, "Should be PrometheusMeterRegistry");
     }
-
 }

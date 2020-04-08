@@ -10,18 +10,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.RestAssured;
 
 /**
  * Should not have any registered MeterRegistry objects when micrometer is disabled
  */
-public class PrometheusDisabledTestCase {
+public class GlobalDefaultDisabledTestCase {
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
-                    .addAsResource(new StringAsset("quarkus.micrometer.export.prometheus.enabled=false"),
+                    .addAsResource(new StringAsset("quarkus.micrometer.registry-enabled-default=false"),
                             "application.properties"));
 
     @Inject
@@ -29,8 +30,10 @@ public class PrometheusDisabledTestCase {
 
     @Test
     public void testMeterRegistryPresent() {
-        // Micrometer is enabled, prometheus is not.
+        // Composite Meter Registry
         Assertions.assertNotNull(registry, "A registry should be configured");
+        Assertions.assertTrue(registry instanceof CompositeMeterRegistry,
+                "Injected registry should be a CompositeMeterRegistry, was " + registry.getClass().getName());
     }
 
     @Test

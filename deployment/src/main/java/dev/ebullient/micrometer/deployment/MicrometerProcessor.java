@@ -6,13 +6,12 @@ import static io.quarkus.deployment.annotations.ExecutionTime.STATIC_INIT;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.interceptor.Interceptor.Priority;
 
-import org.jboss.jandex.DotName;
+import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.ClockProvider;
 import dev.ebullient.micrometer.runtime.JvmMetricsProvider;
@@ -20,9 +19,7 @@ import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.NoopMeterRegistryProvider;
 import dev.ebullient.micrometer.runtime.PrometheusMeterRegistryProvider;
 import dev.ebullient.micrometer.runtime.PrometheusScrapeHandler;
-import dev.ebullient.micrometer.runtime.StackdriverConfig;
 import dev.ebullient.micrometer.runtime.StackdriverMeterRegistryProvider;
-import dev.ebullient.micrometer.runtime.StackdriverRecorder;
 import dev.ebullient.micrometer.runtime.SystemMetricsProvider;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -31,16 +28,15 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.micrometer.stackdriver.StackdriverMeterRegistry;
 import io.quarkus.arc.AlternativePriority;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.arc.deployment.BeanContainerListenerBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
-import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
+import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.FieldCreator;
 import io.quarkus.gizmo.FieldDescriptor;
@@ -54,11 +50,13 @@ import io.vertx.ext.web.RoutingContext;
 
 class MicrometerProcessor {
     private static final String FEATURE = "micrometer";
+    private static final Logger log = Logger.getLogger(MicrometerProcessor.class);
 
-    MicrometerConfig mConfig;
-    PrometheusConfig pConfig;
+    StackdriverBuildTimeConfig mConfig;
+    PrometheusBuildTimeConfig pConfig;
+    StackdriverBuildTimeConfig sConfig;
 
-    @BuildStep(onlyIf = MicrometerConfig.MicrometerEnabled.class)
+    @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
     }
@@ -68,14 +66,14 @@ class MicrometerProcessor {
     // return new CapabilityBuildItem(Capabilities.METRICS);
     // }
 
-    @BuildStep(onlyIf = MicrometerConfig.MicrometerEnabled.class)
+    @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
     void addMicrometerDependencies(BuildProducer<IndexDependencyBuildItem> indexDependency) {
         indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-core"));
         indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-prometheus"));
         indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-stackdriver"));
     }
 
-    @BuildStep(onlyIf = MicrometerConfig.MicrometerEnabled.class)
+    @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
     void registerAdditionalBeans(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans,
             BuildProducer<MicrometerRegistryProviderBuildItem> additionalRegistryProviders) {
@@ -91,7 +89,7 @@ class MicrometerProcessor {
         // Find customizers, binders, and custom provider registries
     }
 
-    @BuildStep(onlyIf = PrometheusConfig.PrometheusEnabled.class)
+    @BuildStep(onlyIf = PrometheusBuildTimeConfig.PrometheusEnabled.class)
     MicrometerRegistryProviderBuildItem createPrometheusRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 
@@ -104,9 +102,11 @@ class MicrometerProcessor {
         return new MicrometerRegistryProviderBuildItem(PrometheusMeterRegistry.class);
     }
 
-    @BuildStep(onlyIf = StackdriverConfig.StackdriverEnabled.class)
+    @BuildStep(onlyIf = StackdriverBuildTimeConfig.StackdriverEnabled.class)
     MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
+
+        System.out.println("STACKDRIVER CONFIG: " + sConfig);
 
         // Add the Stackdriver Registry Producer
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
@@ -117,7 +117,7 @@ class MicrometerProcessor {
         return new MicrometerRegistryProviderBuildItem(StackdriverMeterRegistry.class);
     }
 
-    @BuildStep(onlyIf = MicrometerConfig.MicrometerEnabled.class)
+    @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
     void createRootRegistry(List<MicrometerRegistryProviderBuildItem> providerClasses,
             BuildProducer<GeneratedBeanBuildItem> beanProducer,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
@@ -134,7 +134,7 @@ class MicrometerProcessor {
 
             String name = this.getClass().getPackage().getName() + ".CompositeMicrometerRegistryProvider";
             try (ClassCreator classCreator = ClassCreator.builder().className(name).classOutput(gizmoAdaptor).build()) {
-                classCreator.addAnnotation(ApplicationScoped.class);
+                classCreator.addAnnotation(Singleton.class);
 
                 List<FieldDescriptor> listFields = new ArrayList<>();
 
@@ -178,11 +178,12 @@ class MicrometerProcessor {
         }
     }
 
-    @BuildStep(onlyIf = PrometheusConfig.PrometheusEnabled.class)
+    @BuildStep(onlyIf = PrometheusBuildTimeConfig.PrometheusEnabled.class)
     @Record(STATIC_INIT)
-    void createPrometheusRoute(BuildProducer<RouteBuildItem> routes, HttpRootPathBuildItem httpRoot,
+    void createPrometheusRoute(BuildProducer<RouteBuildItem> routes,
+            HttpRootPathBuildItem httpRoot,
             MicrometerRecorder recorder) {
-
+        System.out.println("PROMETHEUS CONFIG: " + pConfig);
         // set up prometheus scrape endpoint
         Handler<RoutingContext> handler = new PrometheusScrapeHandler();
 
@@ -194,30 +195,26 @@ class MicrometerProcessor {
         routes.produce(new RouteBuildItem(matchPath, handler));
     }
 
-    @Record(ExecutionTime.STATIC_INIT)
-    @BuildStep(onlyIf = StackdriverConfig.StackdriverEnabled.class)
-    void setStackdriverConfig(StackdriverRecorder recorder,
-            StackdriverConfig stackdriverConfig,
-            BuildProducer<BeanContainerListenerBuildItem> containerListenerProducer) {
-
-        if (!stackdriverConfig.projectId.isPresent()) {
-            throw new RuntimeException("Project id has to be set for Stackdriver exporter.");
-        }
-        containerListenerProducer.produce(
-                new BeanContainerListenerBuildItem(recorder.setStackdriverConfig(stackdriverConfig)));
+    @BuildStep(onlyIf = StackdriverBuildTimeConfig.StackdriverEnabled.class)
+    @Record(STATIC_INIT)
+    void configureStackdriverRegistry(MicrometerRecorder recorder) {
+        System.out.println("STACKDRIVER CONFIG: " + sConfig);
     }
 
-    @BuildStep(onlyIf = MicrometerConfig.MicrometerEnabled.class)
+    @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
     @Record(RUNTIME_INIT)
-    void configureRegistry(MicrometerRecorder recorder, StackdriverConfig stackdriverConfig) {
-        recorder.configureRegistry();
+    void configureRegistry(MicrometerRecorder recorder,
+            ShutdownContextBuildItem shutdownContextBuildItem) {
+        recorder.configureRegistry(shutdownContextBuildItem);
     }
 
-    static boolean isInClasspath(DotName classname) {
+    static boolean isInClasspath(String classname) {
         try {
-            Class.forName(classname.toString());
+            Class.forName(classname);
+            System.out.println(classname + ": true");
             return true;
         } catch (ClassNotFoundException e) {
+            System.out.println(classname + ": false");
             return false;
         }
     }
