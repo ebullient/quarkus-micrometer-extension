@@ -24,8 +24,6 @@ import dev.ebullient.micrometer.runtime.SystemMetricsProvider;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
-import io.micrometer.stackdriver.StackdriverMeterRegistry;
 import io.quarkus.arc.AlternativePriority;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
@@ -52,10 +50,6 @@ class MicrometerProcessor {
     private static final String FEATURE = "micrometer";
     private static final Logger log = Logger.getLogger(MicrometerProcessor.class);
 
-    StackdriverBuildTimeConfig mConfig;
-    PrometheusBuildTimeConfig pConfig;
-    StackdriverBuildTimeConfig sConfig;
-
     @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
@@ -68,9 +62,9 @@ class MicrometerProcessor {
 
     @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
     void addMicrometerDependencies(BuildProducer<IndexDependencyBuildItem> indexDependency) {
-        indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-core"));
-        indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-prometheus"));
-        indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-stackdriver"));
+        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-core"));
+        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-prometheus"));
+        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-stackdriver"));
     }
 
     @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
@@ -89,9 +83,15 @@ class MicrometerProcessor {
         // Find customizers, binders, and custom provider registries
     }
 
-    @BuildStep(onlyIf = PrometheusBuildTimeConfig.PrometheusEnabled.class)
+    @BuildStep(onlyIf = PrometheusBuildTimeConfig.PrometheusEnabled.class, loadsApplicationClasses = true)
     MicrometerRegistryProviderBuildItem createPrometheusRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
+
+        // TODO: remove this when the onlyIf check can do this
+        // Double check that Prometheus registry is on the classpath
+        if (!isInClasspath(PrometheusBuildTimeConfig.REGISTRY_CLASS_NAME)) {
+            return null;
+        }
 
         // Add the Prometheus Registry Producer
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
@@ -99,14 +99,18 @@ class MicrometerProcessor {
                 .setUnremovable().build());
 
         // Include the PrometheusMeterRegistry in a possible CompositeMeterRegistry
-        return new MicrometerRegistryProviderBuildItem(PrometheusMeterRegistry.class);
+        return new MicrometerRegistryProviderBuildItem(PrometheusBuildTimeConfig.REGISTRY_CLASS);
     }
 
-    @BuildStep(onlyIf = StackdriverBuildTimeConfig.StackdriverEnabled.class)
+    @BuildStep(onlyIf = StackdriverBuildTimeConfig.StackdriverEnabled.class, loadsApplicationClasses = true)
     MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 
-        System.out.println("STACKDRIVER CONFIG: " + sConfig);
+        // TODO: remove this when the onlyIf check can do this
+        // Double check that Stackdriver registry is on the classpath
+        if (!isInClasspath(StackdriverBuildTimeConfig.REGISTRY_CLASS_NAME)) {
+            return null;
+        }
 
         // Add the Stackdriver Registry Producer
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
@@ -114,7 +118,7 @@ class MicrometerProcessor {
                 .setUnremovable().build());
 
         // Include the StackdriverMeterRegistry in a possible CompositeMeterRegistry
-        return new MicrometerRegistryProviderBuildItem(StackdriverMeterRegistry.class);
+        return new MicrometerRegistryProviderBuildItem(StackdriverBuildTimeConfig.REGISTRY_CLASS);
     }
 
     @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
@@ -123,8 +127,7 @@ class MicrometerProcessor {
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 
         if (providerClasses.isEmpty()) {
-            // No MeterRegistries found
-            // Create a no-op MeterRegistry so things aren't broken
+            // No MeterRegistries found. Create a no-op Composite for CDI injection
             additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable()
                     .addBeanClass(NoopMeterRegistryProvider.class).build());
         } else if (providerClasses.size() > 1) {
@@ -178,12 +181,20 @@ class MicrometerProcessor {
         }
     }
 
-    @BuildStep(onlyIf = PrometheusBuildTimeConfig.PrometheusEnabled.class)
+    @BuildStep(onlyIf = PrometheusBuildTimeConfig.PrometheusEnabled.class, loadsApplicationClasses = true)
     @Record(STATIC_INIT)
     void createPrometheusRoute(BuildProducer<RouteBuildItem> routes,
             HttpRootPathBuildItem httpRoot,
+            PrometheusBuildTimeConfig pConfig,
             MicrometerRecorder recorder) {
-        System.out.println("PROMETHEUS CONFIG: " + pConfig);
+
+        // TODO: remove this when the onlyIf check can do this
+        // Double check that Prometheus registry is on the classpath
+        if (!isInClasspath(PrometheusBuildTimeConfig.REGISTRY_CLASS_NAME)) {
+            return;
+        }
+
+        log.debug("PROMETHEUS CONFIG: " + pConfig);
         // set up prometheus scrape endpoint
         Handler<RoutingContext> handler = new PrometheusScrapeHandler();
 
@@ -195,12 +206,6 @@ class MicrometerProcessor {
         routes.produce(new RouteBuildItem(matchPath, handler));
     }
 
-    @BuildStep(onlyIf = StackdriverBuildTimeConfig.StackdriverEnabled.class)
-    @Record(STATIC_INIT)
-    void configureStackdriverRegistry(MicrometerRecorder recorder) {
-        System.out.println("STACKDRIVER CONFIG: " + sConfig);
-    }
-
     @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
     @Record(RUNTIME_INIT)
     void configureRegistry(MicrometerRecorder recorder,
@@ -210,8 +215,8 @@ class MicrometerProcessor {
 
     static boolean isInClasspath(String classname) {
         try {
-            Class.forName(classname);
-            System.out.println(classname + ": true");
+            Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
+            System.out.println("TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname + ": true");
             return true;
         } catch (ClassNotFoundException e) {
             System.out.println(classname + ": false");

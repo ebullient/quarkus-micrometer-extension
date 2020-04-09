@@ -9,7 +9,8 @@ import io.quarkus.runtime.annotations.ConfigRoot;
 
 @ConfigRoot(name = "micrometer.export.stackdriver", phase = ConfigPhase.BUILD_TIME)
 final class StackdriverBuildTimeConfig {
-    static final String REGISTRY_CLASS = "io.micrometer.stackdriver.StackdriverMeterRegistry";
+    static final Class<?> REGISTRY_CLASS = io.micrometer.stackdriver.StackdriverMeterRegistry.class;
+    static final String REGISTRY_CLASS_NAME = "io.micrometer.stackdriver.StackdriverMeterRegistry";
 
     static class StackdriverEnabled implements BooleanSupplier {
         MicrometerBuildTimeConfig mConfig;
@@ -17,9 +18,10 @@ final class StackdriverBuildTimeConfig {
 
         public boolean getAsBoolean() {
             boolean enabled = false;
-            if (MicrometerProcessor.isInClasspath(REGISTRY_CLASS)) {
-                enabled = mConfig.checkEnabledWithDefault(sConfig.enabled);
-            }
+            // TODO: Can't yet check for classes on the classpath in supplier
+            //if (MicrometerProcessor.isInClasspath(REGISTRY_CLASS_NAME)) {
+            enabled = mConfig.checkEnabledWithDefault(sConfig.enabled);
+            //}
             return enabled;
         }
     }
