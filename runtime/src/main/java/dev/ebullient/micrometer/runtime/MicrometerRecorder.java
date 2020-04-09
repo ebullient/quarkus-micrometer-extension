@@ -66,4 +66,15 @@ public class MicrometerRecorder {
         }
         return s;
     }
+
+    public static Class<?> getClassForName(String classname) {
+        try {
+            log.debug("getClass: TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname);
+            return Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
+        } catch (ClassNotFoundException e) {
+            log.debug("getClass: TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname + ": false");
+            return null;
+        }
+    }
+
 }

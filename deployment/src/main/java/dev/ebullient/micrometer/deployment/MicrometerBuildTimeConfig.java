@@ -1,22 +1,16 @@
 package dev.ebullient.micrometer.deployment;
 
 import java.util.Optional;
-import java.util.function.BooleanSupplier;
 
 import io.quarkus.runtime.annotations.ConfigItem;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
 
+/**
+ * Global configuration for the Micrometer extension
+ */
 @ConfigRoot(name = "micrometer", phase = ConfigPhase.BUILD_TIME)
 final class MicrometerBuildTimeConfig {
-
-    static class MicrometerEnabled implements BooleanSupplier {
-        MicrometerBuildTimeConfig mConfig;
-
-        public boolean getAsBoolean() {
-            return mConfig.enabled;
-        }
-    }
 
     /**
      * If the micrometer extension is enabled.

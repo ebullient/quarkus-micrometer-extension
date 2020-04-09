@@ -9,11 +9,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.quarkus.test.QuarkusUnitTest;
 
 public class PrometheusEnabledTestCase {
+    static final String REGISTRY_CLASS_NAME = "io.micrometer.prometheus.PrometheusMeterRegistry";
+    static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
@@ -31,6 +34,6 @@ public class PrometheusEnabledTestCase {
     public void testMeterRegistryPresent() {
         // Prometheus is enabled (only registry)
         Assertions.assertNotNull(registry, "A registry should be configured");
-        Assertions.assertTrue(registry instanceof PrometheusMeterRegistry, "Should be PrometheusMeterRegistry");
+        Assertions.assertTrue(REGISTRY_CLASS.equals(registry.getClass()), "Should be PrometheusMeterRegistry");
     }
 }

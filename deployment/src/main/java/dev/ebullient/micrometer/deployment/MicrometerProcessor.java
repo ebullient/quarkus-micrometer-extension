@@ -1,10 +1,8 @@
 package dev.ebullient.micrometer.deployment;
 
-import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
-import static io.quarkus.deployment.annotations.ExecutionTime.STATIC_INIT;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
@@ -17,9 +15,6 @@ import dev.ebullient.micrometer.runtime.ClockProvider;
 import dev.ebullient.micrometer.runtime.JvmMetricsProvider;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.NoopMeterRegistryProvider;
-import dev.ebullient.micrometer.runtime.PrometheusMeterRegistryProvider;
-import dev.ebullient.micrometer.runtime.PrometheusScrapeHandler;
-import dev.ebullient.micrometer.runtime.StackdriverMeterRegistryProvider;
 import dev.ebullient.micrometer.runtime.SystemMetricsProvider;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -30,6 +25,7 @@ import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
@@ -41,16 +37,21 @@ import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
-import io.quarkus.vertx.http.deployment.HttpRootPathBuildItem;
-import io.quarkus.vertx.http.deployment.RouteBuildItem;
-import io.vertx.core.Handler;
-import io.vertx.ext.web.RoutingContext;
 
 class MicrometerProcessor {
-    private static final String FEATURE = "micrometer";
     private static final Logger log = Logger.getLogger(MicrometerProcessor.class);
 
-    @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
+    private static final String FEATURE = "micrometer";
+
+    static class MicrometerEnabled implements BooleanSupplier {
+        MicrometerBuildTimeConfig mConfig;
+
+        public boolean getAsBoolean() {
+            return mConfig.enabled;
+        }
+    }
+
+    @BuildStep(onlyIf = MicrometerEnabled.class)
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
     }
@@ -60,14 +61,14 @@ class MicrometerProcessor {
     // return new CapabilityBuildItem(Capabilities.METRICS);
     // }
 
-    @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
+    @BuildStep(onlyIf = MicrometerEnabled.class)
     void addMicrometerDependencies(BuildProducer<IndexDependencyBuildItem> indexDependency) {
         // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-core"));
         // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-prometheus"));
         // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-stackdriver"));
     }
 
-    @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
+    @BuildStep(onlyIf = MicrometerEnabled.class)
     void registerAdditionalBeans(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans,
             BuildProducer<MicrometerRegistryProviderBuildItem> additionalRegistryProviders) {
@@ -83,45 +84,7 @@ class MicrometerProcessor {
         // Find customizers, binders, and custom provider registries
     }
 
-    @BuildStep(onlyIf = PrometheusBuildTimeConfig.PrometheusEnabled.class, loadsApplicationClasses = true)
-    MicrometerRegistryProviderBuildItem createPrometheusRegistry(CombinedIndexBuildItem index,
-            BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
-
-        // TODO: remove this when the onlyIf check can do this
-        // Double check that Prometheus registry is on the classpath
-        if (!isInClasspath(PrometheusBuildTimeConfig.REGISTRY_CLASS_NAME)) {
-            return null;
-        }
-
-        // Add the Prometheus Registry Producer
-        additionalBeans.produce(AdditionalBeanBuildItem.builder()
-                .addBeanClass(PrometheusMeterRegistryProvider.class)
-                .setUnremovable().build());
-
-        // Include the PrometheusMeterRegistry in a possible CompositeMeterRegistry
-        return new MicrometerRegistryProviderBuildItem(PrometheusBuildTimeConfig.REGISTRY_CLASS);
-    }
-
-    @BuildStep(onlyIf = StackdriverBuildTimeConfig.StackdriverEnabled.class, loadsApplicationClasses = true)
-    MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index,
-            BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
-
-        // TODO: remove this when the onlyIf check can do this
-        // Double check that Stackdriver registry is on the classpath
-        if (!isInClasspath(StackdriverBuildTimeConfig.REGISTRY_CLASS_NAME)) {
-            return null;
-        }
-
-        // Add the Stackdriver Registry Producer
-        additionalBeans.produce(AdditionalBeanBuildItem.builder()
-                .addBeanClass(StackdriverMeterRegistryProvider.class)
-                .setUnremovable().build());
-
-        // Include the StackdriverMeterRegistry in a possible CompositeMeterRegistry
-        return new MicrometerRegistryProviderBuildItem(StackdriverBuildTimeConfig.REGISTRY_CLASS);
-    }
-
-    @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
+    @BuildStep(onlyIf = MicrometerEnabled.class)
     void createRootRegistry(List<MicrometerRegistryProviderBuildItem> providerClasses,
             BuildProducer<GeneratedBeanBuildItem> beanProducer,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
@@ -181,46 +144,21 @@ class MicrometerProcessor {
         }
     }
 
-    @BuildStep(onlyIf = PrometheusBuildTimeConfig.PrometheusEnabled.class, loadsApplicationClasses = true)
-    @Record(STATIC_INIT)
-    void createPrometheusRoute(BuildProducer<RouteBuildItem> routes,
-            HttpRootPathBuildItem httpRoot,
-            PrometheusBuildTimeConfig pConfig,
-            MicrometerRecorder recorder) {
-
-        // TODO: remove this when the onlyIf check can do this
-        // Double check that Prometheus registry is on the classpath
-        if (!isInClasspath(PrometheusBuildTimeConfig.REGISTRY_CLASS_NAME)) {
-            return;
-        }
-
-        log.debug("PROMETHEUS CONFIG: " + pConfig);
-        // set up prometheus scrape endpoint
-        Handler<RoutingContext> handler = new PrometheusScrapeHandler();
-
-        // Exact match for resources matched to the root path
-        routes.produce(new RouteBuildItem(pConfig.path, handler));
-
-        // Match paths that begin with the deployment path
-        String matchPath = pConfig.path + (pConfig.path.endsWith("/") ? "*" : "/*");
-        routes.produce(new RouteBuildItem(matchPath, handler));
-    }
-
-    @BuildStep(onlyIf = MicrometerBuildTimeConfig.MicrometerEnabled.class)
-    @Record(RUNTIME_INIT)
-    void configureRegistry(MicrometerRecorder recorder,
-            ShutdownContextBuildItem shutdownContextBuildItem) {
+    @BuildStep(onlyIf = MicrometerEnabled.class)
+    @Record(ExecutionTime.RUNTIME_INIT)
+    void configureRegistry(MicrometerRecorder recorder, ShutdownContextBuildItem shutdownContextBuildItem) {
         recorder.configureRegistry(shutdownContextBuildItem);
     }
 
     static boolean isInClasspath(String classname) {
+        log.debug("findClass TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname);
         try {
             Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
-            System.out.println("TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname + ": true");
             return true;
         } catch (ClassNotFoundException e) {
-            System.out.println(classname + ": false");
+            log.debug("findClass TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname + ": false");
             return false;
         }
     }
+
 }
