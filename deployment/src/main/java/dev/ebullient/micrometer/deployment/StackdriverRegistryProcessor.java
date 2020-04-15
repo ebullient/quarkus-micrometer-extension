@@ -3,12 +3,15 @@ package dev.ebullient.micrometer.deployment;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
+import org.jboss.logging.Logger;
+
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.StackdriverMeterRegistryProvider;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
+import io.quarkus.deployment.pkg.steps.NativeBuild;
 import io.quarkus.runtime.annotations.ConfigItem;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
@@ -19,6 +22,8 @@ import io.quarkus.runtime.annotations.ConfigRoot;
  * references.
  */
 public class StackdriverRegistryProcessor {
+    private static final Logger log = Logger.getLogger(StackdriverRegistryProcessor.class);
+
     static final String REGISTRY_CLASS_NAME = "io.micrometer.stackdriver.StackdriverMeterRegistry";
     static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
@@ -52,7 +57,14 @@ public class StackdriverRegistryProcessor {
         }
     }
 
-    @BuildStep(onlyIf = StackdriverEnabled.class, loadsApplicationClasses = true)
+    @BuildStep(onlyIf = NativeBuild.class)
+    MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index) {
+        log.info("Stackdriver does not support running in native mode.");
+        return null;
+    }
+
+    /** Stackdriver does not work with GraalVM */
+    @BuildStep(onlyIf = StackdriverEnabled.class, onlyIfNot = NativeBuild.class, loadsApplicationClasses = true)
     MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 
