@@ -94,13 +94,4 @@ will continue to work after the bugs are fixed (so they are safe), they just won
 
 ## Using Stackdriver
 
-Stackdriver does not work in native mode. Until the above bugs are fixed (to avoid inclusion of
-optional dependencies in the deployment module), the stackdriver depedency has been commented
-out of the snapshot. To use stackdriver, you'll need to build this module yourself:
-
-1. Clone the repo
-2. Uncomment the stackdriver dependency from `deployment/pom.xml`
-3. From the root project directory, `mvn clean install`
-
-If you want to verify the stackdriver module, remove the `@Disabled` annotation from
-`deployment/src/test/java/dev/ebullient/micrometer/deployment/StackdriverEnabledTestCase.java`
+Stackdriver does not work in native mode, See: https://github.com/grpc/grpc-java/issues/5460.
