@@ -56,10 +56,19 @@
 
     <dependency>
       <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-datadog</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-jmx</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
       <optional>true</optional>
     </dependency>
-
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-stackdriver</artifactId>

@@ -13,7 +13,7 @@ import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.test.QuarkusUnitTest;
 
-public class StackdriverEnabledTestCase {
+public class StackdriverEnabledTest {
     static final String REGISTRY_CLASS_NAME = "io.micrometer.stackdriver.StackdriverMeterRegistry";
     static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
@@ -24,6 +24,7 @@ public class StackdriverEnabledTestCase {
                     .addAsResource(new StringAsset(
                             "quarkus.micrometer.export.stackdriver.enabled=true\n"
                                     + "quarkus.micrometer.registry-enabled-default=false\n"
+                                    + "quarkus.micrometer.export.stackdriver.publish=false\n"
                                     + "quarkus.micrometer.export.stackdriver.project-id=myproject"),
                             "application.properties"));
 

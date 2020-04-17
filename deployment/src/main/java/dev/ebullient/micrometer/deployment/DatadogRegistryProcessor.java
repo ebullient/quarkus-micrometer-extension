@@ -5,32 +5,31 @@ import java.util.function.BooleanSupplier;
 
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.runtime.DatadogMeterRegistryProvider;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
-import dev.ebullient.micrometer.runtime.StackdriverMeterRegistryProvider;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
-import io.quarkus.deployment.pkg.steps.NativeBuild;
 import io.quarkus.runtime.annotations.ConfigItem;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
 
 /**
- * Add support for the Stackdriver Meter Registry. Note that the registry may not
+ * Add support for the Datadog Meter Registry. Note that the registry may not
  * be available at deployment time for some projects: Avoid direct class
  * references.
  */
-public class StackdriverRegistryProcessor {
-    private static final Logger log = Logger.getLogger(StackdriverRegistryProcessor.class);
+public class DatadogRegistryProcessor {
+    private static final Logger log = Logger.getLogger(DatadogRegistryProcessor.class);
 
-    static final String REGISTRY_CLASS_NAME = "io.micrometer.stackdriver.StackdriverMeterRegistry";
+    static final String REGISTRY_CLASS_NAME = "io.micrometer.datadog.DatadogMeterRegistry";
     static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
-    @ConfigRoot(name = "micrometer.export.stackdriver", phase = ConfigPhase.BUILD_TIME)
-    static class StackdriverBuildTimeConfig {
+    @ConfigRoot(name = "micrometer.export.datadog", phase = ConfigPhase.BUILD_TIME)
+    static class DatadogBuildTimeConfig {
         /**
-         * If the Stackdriver micrometer registry is enabled.
+         * If the Datadog micrometer registry is enabled.
          */
         @ConfigItem
         Optional<Boolean> enabled;
@@ -43,9 +42,9 @@ public class StackdriverRegistryProcessor {
         }
     }
 
-    static class StackdriverEnabled implements BooleanSupplier {
+    static class DatadogEnabled implements BooleanSupplier {
         MicrometerBuildTimeConfig mConfig;
-        StackdriverBuildTimeConfig config;
+        DatadogBuildTimeConfig config;
 
         public boolean getAsBoolean() {
             boolean enabled = false;
@@ -57,29 +56,23 @@ public class StackdriverRegistryProcessor {
         }
     }
 
-    @BuildStep(onlyIf = { NativeBuild.class, StackdriverEnabled.class })
-    MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index) {
-        log.info("Stackdriver does not support running in native mode.");
-        return null;
-    }
-
-    /** Stackdriver does not work with GraalVM */
-    @BuildStep(onlyIf = StackdriverEnabled.class, onlyIfNot = NativeBuild.class, loadsApplicationClasses = true)
-    MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index,
+    /** Datadog does not work with GraalVM */
+    @BuildStep(onlyIf = DatadogEnabled.class, loadsApplicationClasses = true)
+    MicrometerRegistryProviderBuildItem createDatadogRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 
         // TODO: remove this when the onlyIf check can do this
-        // Double check that Stackdriver registry is on the classpath
+        // Double check that Datadog registry is on the classpath
         if (!MicrometerProcessor.isInClasspath(REGISTRY_CLASS_NAME)) {
             return null;
         }
 
-        // Add the Stackdriver Registry Producer
+        // Add the Datadog Registry Producer
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
-                .addBeanClass(StackdriverMeterRegistryProvider.class)
+                .addBeanClass(DatadogMeterRegistryProvider.class)
                 .setUnremovable().build());
 
-        // Include the StackdriverMeterRegistry in a possible CompositeMeterRegistry
+        // Include the DatadogMeterRegistry in a possible CompositeMeterRegistry
         return new MicrometerRegistryProviderBuildItem(REGISTRY_CLASS);
     }
 }
