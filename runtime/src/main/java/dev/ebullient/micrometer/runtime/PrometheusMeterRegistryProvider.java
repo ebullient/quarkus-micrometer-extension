@@ -1,8 +1,11 @@
 package dev.ebullient.micrometer.runtime;
 
+import java.util.Map;
+
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
+import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
 import io.micrometer.core.instrument.Clock;
@@ -14,6 +17,7 @@ import io.quarkus.arc.DefaultBean;
 @Singleton
 public class PrometheusMeterRegistryProvider {
     private static final Logger log = Logger.getLogger(PrometheusMeterRegistryProvider.class);
+    static final String PREFIX = "quarkus.micrometer.export.prometheus.";
 
     PrometheusMeterRegistryProvider() {
         log.debug("PrometheusMeterRegistryProvider initialized");
@@ -22,8 +26,15 @@ public class PrometheusMeterRegistryProvider {
     @Produces
     @Singleton
     @DefaultBean
-    public PrometheusConfig config() {
-        return PrometheusConfig.DEFAULT;
+    public PrometheusConfig configure(Config config) {
+        final Map<String, String> properties = MicrometerRecorder.captureProperties(config, PREFIX);
+
+        return new PrometheusConfig() {
+            @Override
+            public String get(String key) {
+                return properties.get(key);
+            }
+        };
     }
 
     @Produces

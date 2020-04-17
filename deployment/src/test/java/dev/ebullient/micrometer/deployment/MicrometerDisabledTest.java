@@ -16,7 +16,7 @@ import io.quarkus.test.QuarkusUnitTest;
 /**
  * Should not have any registered MeterRegistry objects when micrometer is disabled
  */
-public class MicrometerDisabledTestCase {
+public class MicrometerDisabledTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()

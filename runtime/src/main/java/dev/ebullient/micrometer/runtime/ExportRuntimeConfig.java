@@ -10,10 +10,16 @@ import io.quarkus.runtime.annotations.ConfigRoot;
 public class ExportRuntimeConfig {
 
     /**
-     * Stackdriver registry configuration properties
+     * Datadog registry configuration properties
      */
     @ConfigItem
-    Map<String, String> stackdriver;
+    Map<String, String> datadog;
+
+    /**
+     * JMX registry configuration properties
+     */
+    @ConfigItem
+    Map<String, String> jmx;
 
     /**
      * Prometheus registry configuration properties
@@ -21,4 +27,9 @@ public class ExportRuntimeConfig {
     @ConfigItem
     Map<String, String> prometheus;
 
+    /**
+     * Stackdriver registry configuration properties
+     */
+    @ConfigItem
+    Map<String, String> stackdriver;
 }
