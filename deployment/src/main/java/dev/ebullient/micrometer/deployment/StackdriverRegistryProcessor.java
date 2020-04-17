@@ -57,7 +57,7 @@ public class StackdriverRegistryProcessor {
         }
     }
 
-    @BuildStep(onlyIf = NativeBuild.class)
+    @BuildStep(onlyIf = {NativeBuild.class, StackdriverEnabled.class})
     MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index) {
         log.info("Stackdriver does not support running in native mode.");
         return null;
