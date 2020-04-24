@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.deployment;
+package dev.ebullient.micrometer.deployment.export;
 
 import javax.inject.Inject;
 
@@ -13,19 +13,17 @@ import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.test.QuarkusUnitTest;
 
-public class DatadogEnabledTest {
-    static final String REGISTRY_CLASS_NAME = "io.micrometer.datadog.DatadogMeterRegistry";
+public class PrometheusEnabledTest {
+    static final String REGISTRY_CLASS_NAME = "io.micrometer.prometheus.PrometheusMeterRegistry";
     static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
-                    .addClass(DatadogRegistryProcessor.REGISTRY_CLASS)
+                    .addClass(PrometheusRegistryProcessor.REGISTRY_CLASS)
                     .addAsResource(new StringAsset(
-                            "quarkus.micrometer.export.datadog.enabled=true\n"
-                                    + "quarkus.micrometer.registry-enabled-default=false\n"
-                                    + "quarkus.micrometer.export.datadog.publish=false\n"
-                                    + "quarkus.micrometer.export.datadog.apiKey=dummy"),
+                            "quarkus.micrometer.export.prometheus.enabled=true\n"
+                                    + "quarkus.micrometer.registry-enabled-default=false"),
                             "application.properties"));
 
     @Inject
@@ -33,8 +31,8 @@ public class DatadogEnabledTest {
 
     @Test
     public void testMeterRegistryPresent() {
-        // Datadog is enabled (alone, all others disabled)
+        // Prometheus is enabled (only registry)
         Assertions.assertNotNull(registry, "A registry should be configured");
-        Assertions.assertTrue(REGISTRY_CLASS.equals(registry.getClass()), "Should be DatadogMeterRegistry");
+        Assertions.assertTrue(REGISTRY_CLASS.equals(registry.getClass()), "Should be PrometheusMeterRegistry");
     }
 }

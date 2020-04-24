@@ -2,7 +2,6 @@ package dev.ebullient.micrometer.runtime;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
@@ -14,30 +13,34 @@ import org.jboss.logging.Logger;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.binder.MeterBinder;
+import io.micrometer.core.instrument.config.MeterFilter;
+import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.runtime.ShutdownContext;
 import io.quarkus.runtime.annotations.Recorder;
-import io.vertx.ext.web.Route;
-import io.vertx.ext.web.Router;
 
 @Recorder
 public class MicrometerRecorder {
     private static final Logger log = Logger.getLogger(MicrometerRecorder.class);
     static final int TRIM_POS = "quarkus.micrometer.export.".length();
 
-    public Function<Router, Route> route(String name) {
-        return router -> router.route(name);
-    }
-
     public void configureRegistry(ShutdownContext context) {
         final MeterRegistry registry = CDI.current().select(MeterRegistry.class).get();
 
         // Filters to change/constrain construction/output of metrics
-        // Instance<MeterFilter> filters = CDI.current().select(MeterFilter.class, Any.Literal.INSTANCE);
-        // filters.stream().forEach(registry.config()::meterFilter);
+        Instance<MeterFilter> filters = CDI.current().select(MeterFilter.class, Any.Literal.INSTANCE);
+        log.debugf("Configuring global registry. hasFilters=%s", !filters.isUnsatisfied());
+        if (!filters.isUnsatisfied()) {
+            filters.stream().forEach(registry.config()::meterFilter);
+        }
 
-        // Binders must be last: bind to global registry
+        Instance<NamingConvention> convention = CDI.current().select(NamingConvention.class, Any.Literal.INSTANCE);
+        if (convention.isResolvable()) {
+            registry.config().namingConvention(convention.get());
+        }
+
+        // Binders must be last, apply to "top-level" registry
         Instance<MeterBinder> binders = CDI.current().select(MeterBinder.class, Any.Literal.INSTANCE);
-        binders.stream().forEach(binder -> binder.bindTo(Metrics.globalRegistry));
+        binders.stream().forEach(binder -> binder.bindTo(registry));
 
         // Add the current CDI root registry to the global composite
         Metrics.addRegistry(registry);
@@ -46,6 +49,8 @@ public class MicrometerRecorder {
         context.addShutdownTask(new Runnable() {
             @Override
             public void run() {
+                registry.close();
+
                 // Remove the CDI root registry from the global composite
                 log.debug("CDI registry removed from global registry");
                 Metrics.removeRegistry(registry);
@@ -53,7 +58,7 @@ public class MicrometerRecorder {
         });
     }
 
-    static Map<String, String> captureProperties(Config config, String prefix) {
+    public static Map<String, String> captureProperties(Config config, String prefix) {
         final Map<String, String> properties = new HashMap<>();
 
         // Rename and store stackdriver properties

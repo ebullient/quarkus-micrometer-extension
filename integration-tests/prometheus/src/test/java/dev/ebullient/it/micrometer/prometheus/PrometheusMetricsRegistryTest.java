@@ -30,7 +30,9 @@ class PrometheusMetricsRegistryTest {
         given()
                 .when().get("/prometheus")
                 .then()
+                .log().body()
                 .statusCode(200)
+                .body(containsString("registry=\"prometheus\""))
                 .body(containsString("jvm_classes_loaded_classes"));
     }
 }

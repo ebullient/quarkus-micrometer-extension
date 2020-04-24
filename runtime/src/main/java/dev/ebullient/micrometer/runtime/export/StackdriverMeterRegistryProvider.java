@@ -1,14 +1,18 @@
-package dev.ebullient.micrometer.runtime;
+package dev.ebullient.micrometer.runtime.export;
 
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
+import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.stackdriver.StackdriverConfig;
 import io.micrometer.stackdriver.StackdriverMeterRegistry;
 import io.quarkus.arc.DefaultBean;
@@ -21,8 +25,12 @@ public class StackdriverMeterRegistryProvider {
     static final String PUBLISH = "stackdriver.publish";
     static final String ENABLED = "stackdriver.enabled";
 
-    StackdriverMeterRegistryProvider() {
-        log.debug("StackdriverMeterRegistryProvider initialized");
+    final Instance<MeterFilter> filters;
+
+    StackdriverMeterRegistryProvider(
+            @MeterFilterConstraint(type = StackdriverMeterRegistry.class) Instance<MeterFilter> filters) {
+        log.debugf("StackdriverMeterRegistryProvider initialized. hasFilters=%s", !filters.isUnsatisfied());
+        this.filters = filters;
     }
 
     @Produces
@@ -32,7 +40,7 @@ public class StackdriverMeterRegistryProvider {
         final Map<String, String> properties = MicrometerRecorder.captureProperties(config, PREFIX);
 
         // Special check: if publish is set, override the value of enabled
-        // Specifically, The stackdriver registry must be enabled for this
+        // Specifically, the stackdriver registry must be enabled for this
         // Provider to even be present. If this instance (at runtime) wants
         // to prevent metrics from being published, then it would set
         // quarkus.micrometer.export.stackdriver.publish=false
@@ -52,6 +60,11 @@ public class StackdriverMeterRegistryProvider {
     @Singleton
     @DefaultBean
     public StackdriverMeterRegistry registry(StackdriverConfig config, Clock clock) {
-        return new StackdriverMeterRegistry(config, clock);
+        StackdriverMeterRegistry registry = new StackdriverMeterRegistry(config, clock);
+        // Apply stackdriver-registry-specific meter filters
+        if (!filters.isUnsatisfied()) {
+            filters.stream().forEach(registry.config()::meterFilter);
+        }
+        return registry;
     }
 }

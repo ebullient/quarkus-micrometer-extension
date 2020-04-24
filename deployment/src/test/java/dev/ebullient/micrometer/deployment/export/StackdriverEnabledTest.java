@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.deployment;
+package dev.ebullient.micrometer.deployment.export;
 
 import javax.inject.Inject;
 
@@ -11,10 +11,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.config.MissingRequiredConfigurationException;
 import io.quarkus.test.QuarkusUnitTest;
 
-public class StackdriverEnabledInvalidTest {
+public class StackdriverEnabledTest {
     static final String REGISTRY_CLASS_NAME = "io.micrometer.stackdriver.StackdriverMeterRegistry";
     static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
@@ -24,11 +23,10 @@ public class StackdriverEnabledInvalidTest {
                     .addClass(StackdriverRegistryProcessor.REGISTRY_CLASS)
                     .addAsResource(new StringAsset(
                             "quarkus.micrometer.export.stackdriver.enabled=true\n"
-                                    + "quarkus.micrometer.registry-enabled-default=false\n"),
-                            "application.properties"))
-            .assertException(t -> {
-                Assertions.assertEquals(MissingRequiredConfigurationException.class.getName(), t.getClass().getName());
-            });
+                                    + "quarkus.micrometer.registry-enabled-default=false\n"
+                                    + "quarkus.micrometer.export.stackdriver.publish=false\n"
+                                    + "quarkus.micrometer.export.stackdriver.project-id=myproject"),
+                            "application.properties"));
 
     @Inject
     MeterRegistry registry;

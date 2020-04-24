@@ -4,7 +4,7 @@ import org.jboss.jandex.ClassInfo;
 
 import io.quarkus.builder.item.MultiBuildItem;
 
-final class MicrometerRegistryProviderBuildItem extends MultiBuildItem {
+public final class MicrometerRegistryProviderBuildItem extends MultiBuildItem {
 
     final Class<?> providedRegistryClass;
 

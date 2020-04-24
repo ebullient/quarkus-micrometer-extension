@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.deployment;
+package dev.ebullient.micrometer.deployment.export;
 
 import javax.inject.Inject;
 
@@ -13,19 +13,17 @@ import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.test.QuarkusUnitTest;
 
-public class StackdriverEnabledTest {
-    static final String REGISTRY_CLASS_NAME = "io.micrometer.stackdriver.StackdriverMeterRegistry";
+public class JmxEnabledTest {
+    static final String REGISTRY_CLASS_NAME = "io.micrometer.jmx.JmxMeterRegistry";
     static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
-                    .addClass(StackdriverRegistryProcessor.REGISTRY_CLASS)
+                    .addClass(JmxRegistryProcessor.REGISTRY_CLASS)
                     .addAsResource(new StringAsset(
-                            "quarkus.micrometer.export.stackdriver.enabled=true\n"
-                                    + "quarkus.micrometer.registry-enabled-default=false\n"
-                                    + "quarkus.micrometer.export.stackdriver.publish=false\n"
-                                    + "quarkus.micrometer.export.stackdriver.project-id=myproject"),
+                            "quarkus.micrometer.export.jmx.enabled=true\n"
+                                    + "quarkus.micrometer.registry-enabled-default=false\n"),
                             "application.properties"));
 
     @Inject
@@ -33,8 +31,8 @@ public class StackdriverEnabledTest {
 
     @Test
     public void testMeterRegistryPresent() {
-        // Stackdriver is enabled (alone, all others disabled)
+        // Jmx is enabled (alone, all others disabled)
         Assertions.assertNotNull(registry, "A registry should be configured");
-        Assertions.assertTrue(REGISTRY_CLASS.equals(registry.getClass()), "Should be StackdriverMeterRegistry");
+        Assertions.assertTrue(REGISTRY_CLASS.equals(registry.getClass()), "Should be JmxMeterRegistry");
     }
 }

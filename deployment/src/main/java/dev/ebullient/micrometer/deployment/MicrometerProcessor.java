@@ -12,10 +12,10 @@ import javax.interceptor.Interceptor.Priority;
 import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.ClockProvider;
-import dev.ebullient.micrometer.runtime.JvmMetricsProvider;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.NoopMeterRegistryProvider;
-import dev.ebullient.micrometer.runtime.SystemMetricsProvider;
+import dev.ebullient.micrometer.runtime.binder.JvmMetricsProvider;
+import dev.ebullient.micrometer.runtime.binder.SystemMetricsProvider;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
@@ -38,7 +38,7 @@ import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
 
-class MicrometerProcessor {
+public class MicrometerProcessor {
     private static final Logger log = Logger.getLogger(MicrometerProcessor.class);
 
     private static final String FEATURE = "micrometer";
@@ -146,11 +146,12 @@ class MicrometerProcessor {
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.RUNTIME_INIT)
-    void configureRegistry(MicrometerRecorder recorder, ShutdownContextBuildItem shutdownContextBuildItem) {
+    void configureRegistry(MicrometerRecorder recorder,
+            ShutdownContextBuildItem shutdownContextBuildItem) {
         recorder.configureRegistry(shutdownContextBuildItem);
     }
 
-    static boolean isInClasspath(String classname) {
+    public static boolean isInClasspath(String classname) {
         log.debug("findClass TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname);
         try {
             Class.forName(classname, false, Thread.currentThread().getContextClassLoader());

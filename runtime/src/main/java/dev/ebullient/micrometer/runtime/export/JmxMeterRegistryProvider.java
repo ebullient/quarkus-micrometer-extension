@@ -1,14 +1,18 @@
-package dev.ebullient.micrometer.runtime;
+package dev.ebullient.micrometer.runtime.export;
 
 import java.util.Map;
 
+import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
+import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;
@@ -17,11 +21,13 @@ import io.quarkus.arc.DefaultBean;
 @Singleton
 public class JmxMeterRegistryProvider {
     private static final Logger log = Logger.getLogger(JmxMeterRegistryProvider.class);
-
     static final String PREFIX = "quarkus.micrometer.export.jmx.";
 
-    JmxMeterRegistryProvider() {
-        log.debug("JmxMeterRegistryProvider initialized");
+    final Instance<MeterFilter> filters;
+
+    JmxMeterRegistryProvider(@MeterFilterConstraint(type = JmxMeterRegistry.class) Instance<MeterFilter> filters) {
+        log.debugf("JmxMeterRegistryProvider initialized. hasFilters=%s", !filters.isUnsatisfied());
+        this.filters = filters;
     }
 
     @Produces
@@ -49,6 +55,12 @@ public class JmxMeterRegistryProvider {
     @Singleton
     @DefaultBean
     public JmxMeterRegistry registry(JmxConfig config, Clock clock, HierarchicalNameMapper nameMapper) {
-        return new JmxMeterRegistry(config, clock, nameMapper);
+        JmxMeterRegistry registry = new JmxMeterRegistry(config, clock, nameMapper);
+
+        // Apply JMX-specific meter filters
+        if (!filters.isUnsatisfied()) {
+            filters.stream().forEach(registry.config()::meterFilter);
+        }
+        return registry;
     }
 }
