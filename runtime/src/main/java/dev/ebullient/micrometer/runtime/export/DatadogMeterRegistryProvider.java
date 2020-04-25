@@ -27,7 +27,7 @@ public class DatadogMeterRegistryProvider {
     final Instance<MeterFilter> filters;
 
     DatadogMeterRegistryProvider(
-            @MeterFilterConstraint(type = DatadogMeterRegistry.class) Instance<MeterFilter> filters) {
+            @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters) {
         log.debugf("DatadogMeterRegistryProvider initialized. hasFilters=%s", !filters.isUnsatisfied());
         this.filters = filters;
     }

@@ -28,7 +28,7 @@ public class StackdriverMeterRegistryProvider {
     final Instance<MeterFilter> filters;
 
     StackdriverMeterRegistryProvider(
-            @MeterFilterConstraint(type = StackdriverMeterRegistry.class) Instance<MeterFilter> filters) {
+            @MeterFilterConstraint(applyTo = StackdriverMeterRegistry.class) Instance<MeterFilter> filters) {
         log.debugf("StackdriverMeterRegistryProvider initialized. hasFilters=%s", !filters.isUnsatisfied());
         this.filters = filters;
     }

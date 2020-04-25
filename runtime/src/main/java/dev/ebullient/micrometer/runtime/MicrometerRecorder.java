@@ -30,7 +30,7 @@ public class MicrometerRecorder {
         Instance<MeterFilter> filters = CDI.current().select(MeterFilter.class, Any.Literal.INSTANCE);
         log.debugf("Configuring global registry. hasFilters=%s", !filters.isUnsatisfied());
         if (!filters.isUnsatisfied()) {
-            filters.stream().forEach(registry.config()::meterFilter);
+            filters.forEach((x) -> System.out.println(x.getClass() + " : @" + System.identityHashCode(x)));
         }
 
         Instance<NamingConvention> convention = CDI.current().select(NamingConvention.class, Any.Literal.INSTANCE);

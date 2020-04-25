@@ -26,7 +26,7 @@ public class PrometheusMeterRegistryProvider {
     final Instance<MeterFilter> filters;
 
     PrometheusMeterRegistryProvider(
-            @MeterFilterConstraint(type = PrometheusMeterRegistry.class) Instance<MeterFilter> filters) {
+            @MeterFilterConstraint(applyTo = PrometheusMeterRegistry.class) Instance<MeterFilter> filters) {
         log.debugf("PrometheusMeterRegistryProvider initialized. hasFilters=%s", !filters.isUnsatisfied());
         this.filters = filters;
     }

@@ -9,6 +9,9 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.interceptor.Interceptor.Priority;
 
+import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.DotName;
+import org.jboss.jandex.IndexView;
 import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.ClockProvider;
@@ -18,11 +21,15 @@ import dev.ebullient.micrometer.runtime.binder.JvmMetricsProvider;
 import dev.ebullient.micrometer.runtime.binder.SystemMetricsProvider;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.MeterBinder;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.core.instrument.config.MeterFilter;
+import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.arc.AlternativePriority;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
+import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
@@ -40,6 +47,8 @@ import io.quarkus.gizmo.ResultHandle;
 
 public class MicrometerProcessor {
     private static final Logger log = Logger.getLogger(MicrometerProcessor.class);
+    private static final DotName METER_BINDER = DotName.createSimple(MeterBinder.class.getName());
+    private static final DotName METER_FILTER = DotName.createSimple(MeterFilter.class.getName());
 
     private static final String FEATURE = "micrometer";
 
@@ -63,25 +72,42 @@ public class MicrometerProcessor {
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
     void addMicrometerDependencies(BuildProducer<IndexDependencyBuildItem> indexDependency) {
-        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-core"));
-        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-prometheus"));
-        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-stackdriver"));
+        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer",
+        // "micrometer-core"));
+        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer",
+        // "micrometer-registry-prometheus"));
+        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer",
+        // "micrometer-registry-stackdriver"));
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
-    void registerAdditionalBeans(CombinedIndexBuildItem index,
+    void registerAdditionalBeans(CombinedIndexBuildItem indexBuildItem,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans,
+            BuildProducer<UnremovableBeanBuildItem> unremovableBeans,
             BuildProducer<MicrometerRegistryProviderBuildItem> additionalRegistryProviders) {
 
         // Create and keep JVM/System MeterBinders
-        additionalBeans.produce(AdditionalBeanBuildItem.builder()
-                .setUnremovable()
-                .addBeanClass(ClockProvider.class)
-                .addBeanClass(JvmMetricsProvider.class)
-                .addBeanClass(SystemMetricsProvider.class)
-                .build());
+        additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable().addBeanClass(ClockProvider.class)
+                .addBeanClass(JvmMetricsProvider.class).addBeanClass(SystemMetricsProvider.class).build());
+
+        // Keep MeterFilter, MeterBinder, and NamingConvention beans (programmatically injected in recorder)
+        unremovableBeans.produce(new UnremovableBeanBuildItem(
+                new UnremovableBeanBuildItem.BeanClassNameExclusion(MeterFilter.class.getName())));
+        unremovableBeans.produce(new UnremovableBeanBuildItem(
+                new UnremovableBeanBuildItem.BeanClassNameExclusion(MeterBinder.class.getName())));
+        unremovableBeans.produce(new UnremovableBeanBuildItem(
+                new UnremovableBeanBuildItem.BeanClassNameExclusion(NamingConvention.class.getName())));
 
         // Find customizers, binders, and custom provider registries
+        IndexView index = indexBuildItem.getIndex();
+
+        for (ClassInfo info : index.getKnownDirectImplementors(METER_FILTER)) {
+            System.out.println(info);
+        }
+
+        for (ClassInfo info : index.getKnownDirectImplementors(METER_BINDER)) {
+            System.out.println(info);
+        }
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
@@ -133,7 +159,8 @@ public class MicrometerProcessor {
                     MethodDescriptor addRegistry = MethodDescriptor.ofMethod(CompositeMeterRegistry.class, "add",
                             CompositeMeterRegistry.class, MeterRegistry.class);
                     for (FieldDescriptor fd : listFields) {
-                        ResultHandle arg = createCompositeRegistry.readInstanceField(fd, createCompositeRegistry.getThis());
+                        ResultHandle arg = createCompositeRegistry.readInstanceField(fd,
+                                createCompositeRegistry.getThis());
                         createCompositeRegistry.invokeVirtualMethod(addRegistry, compositeRegistry, arg);
                     }
 
@@ -157,7 +184,8 @@ public class MicrometerProcessor {
             Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
             return true;
         } catch (ClassNotFoundException e) {
-            log.debug("findClass TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname + ": false");
+            log.debug("findClass TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname
+                    + ": false");
             return false;
         }
     }

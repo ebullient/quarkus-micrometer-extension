@@ -72,6 +72,12 @@ This optional build-time atribute works together with the above global default a
       * Prometheus support is enabled!
 * ELSE: Prometheus is disabled
 
+### Using Stackdriver
+
+Stackdriver does not work in native mode, See: https://github.com/grpc/grpc-java/issues/5460.
+
+##
+
 ## Bug regarding optional dependencies in deployment modules
 
 https://github.com/quarkusio/quarkus/pull/8487
@@ -91,7 +97,3 @@ quarkus.micrometer.exporter.prometheus.enabled=true
 The default value of `quarkus.micrometer.registry-enabled-default` will remain `true`, which will fail
 until the above bugs are fixed. The properties used to work around the deployment classpath issue
 will continue to work after the bugs are fixed (so they are safe), they just won't be necessary.
-
-## Using Stackdriver
-
-Stackdriver does not work in native mode, See: https://github.com/grpc/grpc-java/issues/5460.

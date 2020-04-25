@@ -25,7 +25,7 @@ public class JmxMeterRegistryProvider {
 
     final Instance<MeterFilter> filters;
 
-    JmxMeterRegistryProvider(@MeterFilterConstraint(type = JmxMeterRegistry.class) Instance<MeterFilter> filters) {
+    JmxMeterRegistryProvider(@MeterFilterConstraint(applyTo = JmxMeterRegistry.class) Instance<MeterFilter> filters) {
         log.debugf("JmxMeterRegistryProvider initialized. hasFilters=%s", !filters.isUnsatisfied());
         this.filters = filters;
     }
