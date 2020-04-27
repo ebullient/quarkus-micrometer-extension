@@ -9,7 +9,7 @@ import javax.inject.Singleton;
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
+import dev.ebullient.micrometer.runtime.Annotations.MeterFilterConstraint;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.config.MeterFilter;
@@ -54,8 +54,8 @@ public class PrometheusMeterRegistryProvider {
 
     @Produces
     @Singleton
-    @DefaultBean
     public PrometheusMeterRegistry registry(PrometheusConfig config, CollectorRegistry collectorRegistry, Clock clock) {
+        System.out.println("Extension Prometheus Registry");
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(config, collectorRegistry, clock);
         // Apply prometheus-specific meter filters
         if (!filters.isUnsatisfied()) {

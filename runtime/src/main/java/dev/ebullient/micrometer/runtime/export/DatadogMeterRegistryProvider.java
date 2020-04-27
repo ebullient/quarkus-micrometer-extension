@@ -9,7 +9,7 @@ import javax.inject.Singleton;
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
+import dev.ebullient.micrometer.runtime.Annotations.MeterFilterConstraint;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.config.MeterFilter;

@@ -3,18 +3,12 @@ package dev.ebullient.micrometer.runtime;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.enterprise.inject.Any;
-import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.CDI;
 
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.binder.MeterBinder;
-import io.micrometer.core.instrument.config.MeterFilter;
-import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.runtime.ShutdownContext;
 import io.quarkus.runtime.annotations.Recorder;
 
@@ -24,38 +18,44 @@ public class MicrometerRecorder {
     static final int TRIM_POS = "quarkus.micrometer.export.".length();
 
     public void configureRegistry(ShutdownContext context) {
-        final MeterRegistry registry = CDI.current().select(MeterRegistry.class).get();
+        final MeterRegistry rootRegistry = CDI.current().select(MeterRegistry.class).get();
 
-        // Filters to change/constrain construction/output of metrics
-        Instance<MeterFilter> filters = CDI.current().select(MeterFilter.class, Any.Literal.INSTANCE);
-        log.debugf("Configuring global registry. hasFilters=%s", !filters.isUnsatisfied());
-        if (!filters.isUnsatisfied()) {
-            filters.forEach((x) -> System.out.println(x.getClass() + " : @" + System.identityHashCode(x)));
-        }
+        // final Instance<MeterRegistry> allRegistries = CDI.current().select(MeterRegistry.class, Any.Literal.INSTANCE);
 
-        Instance<NamingConvention> convention = CDI.current().select(NamingConvention.class, Any.Literal.INSTANCE);
-        if (convention.isResolvable()) {
-            registry.config().namingConvention(convention.get());
-        }
+        System.out.println("CONFIGURE " + rootRegistry);
+        // final MeterRegistry registry = CDI.current().select(MeterRegistry.class).get();
 
-        // Binders must be last, apply to "top-level" registry
-        Instance<MeterBinder> binders = CDI.current().select(MeterBinder.class, Any.Literal.INSTANCE);
-        binders.stream().forEach(binder -> binder.bindTo(registry));
+        // // Filters to change/constrain construction/output of metrics
+        // Instance<MeterFilter> filters = CDI.current().select(MeterFilter.class, Any.Literal.INSTANCE);
+        // log.debugf("Configuring global registry. hasFilters=%s", !filters.isUnsatisfied());
+        // if (!filters.isUnsatisfied()) {
+        //     filters.forEach((x) -> System.out.println(x.getClass() + " : @" + System.identityHashCode(x)));
+        // }
 
-        // Add the current CDI root registry to the global composite
-        Metrics.addRegistry(registry);
-        log.debug("Global metrics registry initialized");
+        // Instance<NamingConvention> convention = CDI.current().select(NamingConvention.class, Any.Literal.INSTANCE);
+        // if (convention.isResolvable()) {
+        //     registry.config().namingConvention(convention.get());
+        // }
 
-        context.addShutdownTask(new Runnable() {
-            @Override
-            public void run() {
-                registry.close();
+        // // Binders must be last, apply to "top-level" registry
+        // Instance<MeterBinder> binders = CDI.current().select(MeterBinder.class, Any.Literal.INSTANCE);
+        // binders.stream().forEach(binder -> binder.bindTo(registry));
 
-                // Remove the CDI root registry from the global composite
-                log.debug("CDI registry removed from global registry");
-                Metrics.removeRegistry(registry);
-            }
-        });
+        // // Add the current CDI root registry to the global composite
+        // Metrics.addRegistry(registry);
+        // log.debug("Global metrics registry initialized");
+
+        // context.addShutdownTask(new Runnable() {
+        //     @Override
+        //     public void run() {
+        //         registry.close();
+
+        //         // Remove the CDI root registry from the global composite
+        //         log.debug("CDI registry removed from global registry");
+        //         Metrics.removeRegistry(registry);
+        //     }
+        // });
+
     }
 
     public static Map<String, String> captureProperties(Config config, String prefix) {

@@ -9,7 +9,7 @@ public final class MicrometerRegistryProviderBuildItem extends MultiBuildItem {
     final Class<?> providedRegistryClass;
 
     public MicrometerRegistryProviderBuildItem(ClassInfo provider) {
-        this.providedRegistryClass = null;
+        this.providedRegistryClass = MicrometerProcessor.getClass(provider.name().toString());
     }
 
     public MicrometerRegistryProviderBuildItem(Class<?> providedRegistryClass) {

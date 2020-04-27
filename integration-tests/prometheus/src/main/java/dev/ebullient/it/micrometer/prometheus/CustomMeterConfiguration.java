@@ -5,7 +5,7 @@ import java.util.Arrays;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
-import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
+import dev.ebullient.micrometer.runtime.Annotations.MeterFilterConstraint;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
