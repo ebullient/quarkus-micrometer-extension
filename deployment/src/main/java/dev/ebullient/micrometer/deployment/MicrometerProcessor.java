@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
-import javax.interceptor.Interceptor.Priority;
-
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.ClassInfo;
@@ -15,7 +13,6 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
-import org.jboss.jandex.Type;
 import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.ClockProvider;
@@ -28,11 +25,7 @@ import io.micrometer.core.instrument.binder.MeterBinder;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.arc.deployment.BeanRegistrationPhaseBuildItem;
-import io.quarkus.arc.deployment.BeanRegistrationPhaseBuildItem.BeanConfiguratorBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
-import io.quarkus.arc.processor.BeanConfigurator;
-import io.quarkus.arc.processor.BuiltinScope;
 import io.quarkus.arc.processor.DotNames;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -131,26 +124,9 @@ public class MicrometerProcessor {
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
-    void createRootRegistry(BeanRegistrationPhaseBuildItem beanRegistrationPhase,
-            BuildProducer<BeanConfiguratorBuildItem> beanConfiguration,
-            List<MicrometerRegistryProviderBuildItem> providerClassItems) {
-
-        Type micrometerRegistry = Type.create(METER_REGISTRY, Type.Kind.CLASS);
-
-        // Remove duplicates
-        final Set<Class<?>> providerClasses = new HashSet<>();
-        providerClassItems.forEach(x -> providerClasses.add(x.getProvidedRegistryClass()));
-
-        BeanConfigurator<MeterRegistry> configurator = beanRegistrationPhase.getContext().configure(MeterRegistry.class);
-        configurator.scope(BuiltinScope.SINGLETON.getInfo())
-                .types(micrometerRegistry)
-                .alternativePriority(Priority.PLATFORM_AFTER)
-                .creator(CompositeRegistryCreator.class);
-
-        providerClasses.forEach(x -> configurator.param(x.getName(), x));
-        configurator.done();
-
-        beanConfiguration.produce(new BeanConfiguratorBuildItem(configurator));
+    void createRootRegistry(
+            BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem) {
+        additionalBeanBuildItem.produce(AdditionalBeanBuildItem.builder().addBeanClass(CompositeRegistryCreator.class).build());
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
