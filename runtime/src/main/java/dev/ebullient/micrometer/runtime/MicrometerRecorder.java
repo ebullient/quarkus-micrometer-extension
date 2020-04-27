@@ -76,8 +76,10 @@ public class MicrometerRecorder {
 
         // Binders must be last, apply to "top-level" registry
         Instance<MeterBinder> binders = CDI.current().select(MeterBinder.class, Any.Literal.INSTANCE);
-        binders.forEach(System.out::println);
-        binders.forEach(binder -> binder.bindTo(rootRegistry));
+        binders.forEach(binder -> {
+            log.debugf("Binding %s", binder);
+            binder.bindTo(rootRegistry);
+        });
 
         // Add the current CDI root registry to the global composite
         Metrics.addRegistry(rootRegistry);

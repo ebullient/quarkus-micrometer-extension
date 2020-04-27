@@ -2,8 +2,10 @@ package dev.ebullient.it.micrometer.prometheus;
 
 import java.util.Arrays;
 
+import javax.annotation.Priority;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
+import javax.interceptor.Interceptor;
 
 import dev.ebullient.micrometer.runtime.Annotations.MeterFilterConstraint;
 import io.micrometer.core.instrument.Tag;
@@ -11,7 +13,8 @@ import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 
 @Singleton
-public class CustomMeterConfiguration {
+@Priority(Interceptor.Priority.APPLICATION - 100)
+public class CustomConfiguration {
 
     @Produces
     @Singleton
@@ -27,4 +30,15 @@ public class CustomMeterConfiguration {
         return MeterFilter.commonTags(Arrays.asList(
                 Tag.of("env", "test")));
     }
+
+    /**
+     * Produce a custom prometheus configuration that is isolated/separate from
+     * the application (and won't be connected to the Quarkus configured application
+     * endpoint).
+     */
+    // @Produces
+    // @Singleton
+    // public PrometheusMeterRegistry registry(CollectorRegistry collectorRegistry, Clock clock) {
+    //     return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT, collectorRegistry, clock);
+    // }
 }
