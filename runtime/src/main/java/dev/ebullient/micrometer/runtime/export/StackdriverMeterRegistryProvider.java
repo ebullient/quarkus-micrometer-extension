@@ -2,17 +2,14 @@ package dev.ebullient.micrometer.runtime.export;
 
 import java.util.Map;
 
-import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.runtime.Annotations.MeterFilterConstraint;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.stackdriver.StackdriverConfig;
 import io.micrometer.stackdriver.StackdriverMeterRegistry;
 import io.quarkus.arc.DefaultBean;
@@ -24,14 +21,6 @@ public class StackdriverMeterRegistryProvider {
     static final String PREFIX = "quarkus.micrometer.export.stackdriver.";
     static final String PUBLISH = "stackdriver.publish";
     static final String ENABLED = "stackdriver.enabled";
-
-    final Instance<MeterFilter> filters;
-
-    StackdriverMeterRegistryProvider(
-            @MeterFilterConstraint(applyTo = StackdriverMeterRegistry.class) Instance<MeterFilter> filters) {
-        log.debugf("StackdriverMeterRegistryProvider initialized. hasFilters=%s", !filters.isUnsatisfied());
-        this.filters = filters;
-    }
 
     @Produces
     @Singleton
@@ -58,13 +47,7 @@ public class StackdriverMeterRegistryProvider {
 
     @Produces
     @Singleton
-    @DefaultBean
     public StackdriverMeterRegistry registry(StackdriverConfig config, Clock clock) {
-        StackdriverMeterRegistry registry = new StackdriverMeterRegistry(config, clock);
-        // Apply stackdriver-registry-specific meter filters
-        if (!filters.isUnsatisfied()) {
-            filters.stream().forEach(registry.config()::meterFilter);
-        }
-        return registry;
+        return new StackdriverMeterRegistry(config, clock);
     }
 }

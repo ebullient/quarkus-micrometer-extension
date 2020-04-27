@@ -8,7 +8,6 @@ import java.util.function.BooleanSupplier;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
-import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
@@ -86,11 +85,16 @@ public class MicrometerProcessor {
         IndexView index = indexBuildItem.getIndex();
 
         // Find classes that define MeterRegistries, MeterBinders, and MeterFilters
-        Collection<ClassInfo> knownRegistries = index.getAllKnownSubclasses(METER_REGISTRY);
-        Collection<ClassInfo> knownClasses = new HashSet<ClassInfo>();
-        knownClasses.addAll(index.getAllKnownImplementors(METER_BINDER));
-        knownClasses.addAll(index.getAllKnownImplementors(METER_FILTER));
-        knownClasses.addAll(index.getAllKnownImplementors(NAMING_CONVENTION));
+        Collection<String> knownRegistries = new HashSet<>();
+        index.getAllKnownSubclasses(METER_REGISTRY).forEach(x -> knownRegistries.add(x.name().toString()));
+
+        Collection<String> knownClasses = new HashSet<>();
+        knownClasses.add(METER_BINDER.toString());
+        index.getAllKnownImplementors(METER_BINDER).forEach(x -> knownClasses.add(x.name().toString()));
+        knownClasses.add(METER_FILTER.toString());
+        index.getAllKnownImplementors(METER_FILTER).forEach(x -> knownClasses.add(x.name().toString()));
+        knownClasses.add(NAMING_CONVENTION.toString());
+        index.getAllKnownImplementors(NAMING_CONVENTION).forEach(x -> knownClasses.add(x.name().toString()));
 
         Set<String> keepMe = new HashSet<>();
 
@@ -98,25 +102,24 @@ public class MicrometerProcessor {
         // MeterFilters
         for (AnnotationInstance annotation : index.getAnnotations(DotNames.PRODUCES)) {
             AnnotationTarget target = annotation.target();
-            ClassInfo type;
             switch (target.kind()) {
                 case METHOD:
                     MethodInfo method = target.asMethod();
-                    type = index.getClassByName(method.returnType().name());
-                    if (knownRegistries.contains(type)) {
-                        providerClasses.produce(new MicrometerRegistryProviderBuildItem(type));
+                    String returnType = method.returnType().name().toString();
+                    if (knownRegistries.contains(returnType)) {
+                        providerClasses.produce(new MicrometerRegistryProviderBuildItem(returnType));
                         keepMe.add(method.declaringClass().name().toString());
-                    } else if (knownClasses.contains(type)) {
+                    } else if (knownClasses.contains(returnType)) {
                         keepMe.add(method.declaringClass().name().toString());
                     }
                     break;
                 case FIELD:
                     FieldInfo field = target.asField();
-                    type = index.getClassByName(field.type().name());
-                    if (knownRegistries.contains(type)) {
-                        providerClasses.produce(new MicrometerRegistryProviderBuildItem(type));
+                    String fieldType = field.type().name().toString();
+                    if (knownRegistries.contains(fieldType)) {
+                        providerClasses.produce(new MicrometerRegistryProviderBuildItem(fieldType));
                         keepMe.add(field.declaringClass().name().toString());
-                    } else if (knownClasses.contains(type)) {
+                    } else if (knownClasses.contains(fieldType)) {
                         keepMe.add(field.declaringClass().name().toString());
                     }
                     break;
@@ -128,20 +131,15 @@ public class MicrometerProcessor {
         return new UnremovableBeanBuildItem(new UnremovableBeanBuildItem.BeanClassNamesExclusion(keepMe));
     }
 
-    // @BuildStep(onlyIf = MicrometerEnabled.class)
-    // void createRootRegistry(
-    //         List<MicrometerRegistryProviderBuildItem> providerClasses,
-    //         BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem) {
-    //     additionalBeanBuildItem.produce(AdditionalBeanBuildItem.builder().addBeanClass(CompositeRegistryCreator.class).build());
-    // }
-
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.RUNTIME_INIT)
     void configureRegistry(MicrometerRecorder recorder,
             List<MicrometerRegistryProviderBuildItem> providerClasses,
             ShutdownContextBuildItem shutdownContextBuildItem) {
 
-        recorder.configureRegistry(shutdownContextBuildItem);
+        Set<String> classNames = new HashSet<>();
+        providerClasses.forEach(x -> classNames.add(x.getRegistryClassName()));
+        recorder.configureRegistry(classNames, shutdownContextBuildItem);
     }
 
     public static boolean isInClasspath(String classname) {

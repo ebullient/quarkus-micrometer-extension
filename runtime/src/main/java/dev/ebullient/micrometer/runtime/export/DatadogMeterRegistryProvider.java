@@ -2,17 +2,14 @@ package dev.ebullient.micrometer.runtime.export;
 
 import java.util.Map;
 
-import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.runtime.Annotations.MeterFilterConstraint;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.datadog.DatadogConfig;
 import io.micrometer.datadog.DatadogMeterRegistry;
 import io.quarkus.arc.DefaultBean;
@@ -23,14 +20,6 @@ public class DatadogMeterRegistryProvider {
     static final String PREFIX = "quarkus.micrometer.export.datadog.";
     static final String PUBLISH = "datadog.publish";
     static final String ENABLED = "datadog.enabled";
-
-    final Instance<MeterFilter> filters;
-
-    DatadogMeterRegistryProvider(
-            @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters) {
-        log.debugf("DatadogMeterRegistryProvider initialized. hasFilters=%s", !filters.isUnsatisfied());
-        this.filters = filters;
-    }
 
     @Produces
     @Singleton
@@ -57,15 +46,9 @@ public class DatadogMeterRegistryProvider {
 
     @Produces
     @Singleton
-    @DefaultBean
     public DatadogMeterRegistry registry(DatadogConfig config, Clock clock) {
-        DatadogMeterRegistry registry = DatadogMeterRegistry.builder(config)
+        return DatadogMeterRegistry.builder(config)
                 .clock(clock)
                 .build();
-        // Apply datadog-specific meter filters
-        if (!filters.isUnsatisfied()) {
-            filters.stream().forEach(registry.config()::meterFilter);
-        }
-        return registry;
     }
 }

@@ -2,29 +2,32 @@ package dev.ebullient.micrometer.deployment;
 
 import org.jboss.jandex.ClassInfo;
 
-import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.quarkus.builder.item.MultiBuildItem;
 
 public final class MicrometerRegistryProviderBuildItem extends MultiBuildItem {
 
-    final Class<?> providedRegistryClass;
+    final String className;
 
     public MicrometerRegistryProviderBuildItem(ClassInfo provider) {
-        this.providedRegistryClass = MicrometerRecorder.getClassForName(provider.name().toString());
+        this.className = provider.name().toString();
     }
 
     public MicrometerRegistryProviderBuildItem(Class<?> providedRegistryClass) {
-        this.providedRegistryClass = providedRegistryClass;
+        this.className = providedRegistryClass.getName();
     }
 
-    public Class<?> getProvidedRegistryClass() {
-        return providedRegistryClass;
+    public MicrometerRegistryProviderBuildItem(String returnType) {
+        this.className = returnType;
+    }
+
+    public String getRegistryClassName() {
+        return className;
     }
 
     @Override
     public String toString() {
         return "MicrometerRegistryProviderBuildItem{"
-                + providedRegistryClass.getName()
+                + className
                 + '}';
     }
 }
