@@ -55,7 +55,6 @@ public class PrometheusMeterRegistryProvider {
     @Produces
     @Singleton
     public PrometheusMeterRegistry registry(PrometheusConfig config, CollectorRegistry collectorRegistry, Clock clock) {
-        System.out.println("Extension Prometheus Registry");
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(config, collectorRegistry, clock);
         // Apply prometheus-specific meter filters
         if (!filters.isUnsatisfied()) {

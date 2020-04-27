@@ -13,7 +13,6 @@ public class SecondPrometheusProvider {
     @Produces
     @Singleton
     public PrometheusMeterRegistry registry(CollectorRegistry collectorRegistry, Clock clock) {
-        System.out.println("Make custom registry");
         return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT, collectorRegistry, clock);
     }
 }

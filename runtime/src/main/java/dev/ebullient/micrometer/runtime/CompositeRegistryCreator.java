@@ -6,9 +6,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.context.Dependent;
-import javax.enterprise.inject.Alternative;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Produces;
 import javax.enterprise.inject.spi.Bean;
@@ -34,13 +31,11 @@ import io.quarkus.arc.AlternativePriority;
  *
  * @return the single resolveable "root" MeterRegistry
  */
-@Dependent
 public class CompositeRegistryCreator {
     private static final Logger log = Logger.getLogger(CompositeRegistryCreator.class);
 
     @Produces
     @Singleton
-    @Alternative()
     @AlternativePriority(PLATFORM_AFTER)
     public MeterRegistry create() {
 
@@ -62,7 +57,6 @@ public class CompositeRegistryCreator {
         }
 
         log.debugf("MeterRegistry instances discovered: %s", registries);
-        System.out.printf("MeterRegistry instances discovered: %s\n", registries);
 
         if (registries.isEmpty()) {
             return new CompositeMeterRegistry(clock);

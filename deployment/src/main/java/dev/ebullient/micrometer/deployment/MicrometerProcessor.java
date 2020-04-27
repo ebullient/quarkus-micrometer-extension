@@ -75,8 +75,13 @@ public class MicrometerProcessor {
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 
         // Create and keep JVM/System MeterBinders
-        additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable().addBeanClass(ClockProvider.class)
-                .addBeanClass(JvmMetricsProvider.class).addBeanClass(SystemMetricsProvider.class).build());
+        additionalBeans.produce(AdditionalBeanBuildItem.builder()
+                .setUnremovable()
+                .addBeanClass(ClockProvider.class)
+                .addBeanClass(JvmMetricsProvider.class)
+                .addBeanClass(SystemMetricsProvider.class)
+                .addBeanClass(CompositeRegistryCreator.class)
+                .build());
 
         IndexView index = indexBuildItem.getIndex();
 
@@ -87,7 +92,7 @@ public class MicrometerProcessor {
         knownClasses.addAll(index.getAllKnownImplementors(METER_FILTER));
         knownClasses.addAll(index.getAllKnownImplementors(NAMING_CONVENTION));
 
-        Set<DotName> keepMe = new HashSet<>();
+        Set<String> keepMe = new HashSet<>();
 
         // Find and keep _producers_ of those MeterRegistries, MeterBinders, and
         // MeterFilters
@@ -100,9 +105,9 @@ public class MicrometerProcessor {
                     type = index.getClassByName(method.returnType().name());
                     if (knownRegistries.contains(type)) {
                         providerClasses.produce(new MicrometerRegistryProviderBuildItem(type));
-                        keepMe.add(method.declaringClass().name());
+                        keepMe.add(method.declaringClass().name().toString());
                     } else if (knownClasses.contains(type)) {
-                        keepMe.add(method.declaringClass().name());
+                        keepMe.add(method.declaringClass().name().toString());
                     }
                     break;
                 case FIELD:
@@ -110,9 +115,9 @@ public class MicrometerProcessor {
                     type = index.getClassByName(field.type().name());
                     if (knownRegistries.contains(type)) {
                         providerClasses.produce(new MicrometerRegistryProviderBuildItem(type));
-                        keepMe.add(field.declaringClass().name());
+                        keepMe.add(field.declaringClass().name().toString());
                     } else if (knownClasses.contains(type)) {
-                        keepMe.add(field.declaringClass().name());
+                        keepMe.add(field.declaringClass().name().toString());
                     }
                     break;
                 default:
@@ -120,14 +125,15 @@ public class MicrometerProcessor {
             }
         }
 
-        return new UnremovableBeanBuildItem(new UnremovableBeanBuildItem.BeanTypesExclusion(keepMe));
+        return new UnremovableBeanBuildItem(new UnremovableBeanBuildItem.BeanClassNamesExclusion(keepMe));
     }
 
-    @BuildStep(onlyIf = MicrometerEnabled.class)
-    void createRootRegistry(
-            BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem) {
-        additionalBeanBuildItem.produce(AdditionalBeanBuildItem.builder().addBeanClass(CompositeRegistryCreator.class).build());
-    }
+    // @BuildStep(onlyIf = MicrometerEnabled.class)
+    // void createRootRegistry(
+    //         List<MicrometerRegistryProviderBuildItem> providerClasses,
+    //         BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem) {
+    //     additionalBeanBuildItem.produce(AdditionalBeanBuildItem.builder().addBeanClass(CompositeRegistryCreator.class).build());
+    // }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.RUNTIME_INIT)
@@ -139,23 +145,6 @@ public class MicrometerProcessor {
     }
 
     public static boolean isInClasspath(String classname) {
-        log.debug("findClass TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname);
-        try {
-            Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
-            return true;
-        } catch (ClassNotFoundException e) {
-            log.debug("findClass TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname
-                    + ": false");
-            return false;
-        }
-    }
-
-    public static Class<?> getClass(String classname) {
-        log.debug("findClass TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname);
-        try {
-            return Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
-        } catch (ClassNotFoundException e) {
-            return null;
-        }
+        return MicrometerRecorder.getClassForName(classname) != null;
     }
 }
