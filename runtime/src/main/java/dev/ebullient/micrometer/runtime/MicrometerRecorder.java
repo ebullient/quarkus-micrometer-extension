@@ -30,12 +30,16 @@ public class MicrometerRecorder {
     public void configureRegistry(Set<String> registryTypes, ShutdownContext context) {
         log.debugf("Configuring Micrometer registries : %s", registryTypes);
 
-        final Instance<MeterRegistry> allRegistries = CDI.current().select(MeterRegistry.class, Any.Literal.INSTANCE);
-        final MeterRegistry rootRegistry = allRegistries.get();
+        final MeterRegistry rootRegistry = CDI.current().select(MeterRegistry.class).get();
+        final BeanManager beanManager = CDI.current().getBeanManager();
 
-        BeanManager beanManager = CDI.current().getBeanManager();
         Set<Bean<?>> allMeterFilters = new HashSet<>(beanManager.getBeans(MeterFilter.class, Any.Literal.INSTANCE));
         for (Bean<?> bean : allMeterFilters) {
+            System.out.println(bean + " : " + bean.getQualifiers());
+        }
+
+        Set<Bean<?>> allMeterRegistries = new HashSet<>(beanManager.getBeans(MeterRegistry.class, Any.Literal.INSTANCE));
+        for (Bean<?> bean : allMeterRegistries) {
             System.out.println(bean + " : " + bean.getQualifiers());
         }
 

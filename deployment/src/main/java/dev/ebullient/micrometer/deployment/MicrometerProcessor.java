@@ -12,7 +12,6 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
-import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.ClockProvider;
 import dev.ebullient.micrometer.runtime.CompositeRegistryCreator;
@@ -36,7 +35,6 @@ import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 
 public class MicrometerProcessor {
-    private static final Logger log = Logger.getLogger(MicrometerProcessor.class);
     private static final DotName METER_REGISTRY = DotName.createSimple(MeterRegistry.class.getName());
     private static final DotName METER_BINDER = DotName.createSimple(MeterBinder.class.getName());
     private static final DotName METER_FILTER = DotName.createSimple(MeterFilter.class.getName());

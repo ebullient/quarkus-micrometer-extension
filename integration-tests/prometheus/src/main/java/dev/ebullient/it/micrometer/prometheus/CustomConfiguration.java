@@ -7,10 +7,13 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 import javax.interceptor.Interceptor;
 
-import dev.ebullient.micrometer.runtime.Annotations.MeterFilterConstraint;
+import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
+import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.config.MeterFilter;
+import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.prometheus.client.CollectorRegistry;
 
 @Singleton
 @Priority(Interceptor.Priority.APPLICATION - 100)
@@ -36,9 +39,9 @@ public class CustomConfiguration {
      * the application (and won't be connected to the Quarkus configured application
      * endpoint).
      */
-    // @Produces
-    // @Singleton
-    // public PrometheusMeterRegistry registry(CollectorRegistry collectorRegistry, Clock clock) {
-    //     return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT, collectorRegistry, clock);
-    // }
+    @Produces
+    @Singleton
+    public PrometheusMeterRegistry registry(CollectorRegistry collectorRegistry, Clock clock) {
+        return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT, collectorRegistry, clock);
+    }
 }

@@ -22,7 +22,7 @@ class PrometheusMetricsRegistryTest {
                 .when().get("/message")
                 .then()
                 .statusCode(200)
-                .body(containsString("io.micrometer.prometheus.PrometheusMeterRegistry"));
+                .body(containsString("io.micrometer.core.instrument.composite.CompositeMeterRegistry"));
     }
 
     @Test
@@ -30,7 +30,7 @@ class PrometheusMetricsRegistryTest {
         given()
                 .when().get("/prometheus")
                 .then()
-                .log().body()
+                // .log().body()
                 .statusCode(200)
                 .body(containsString("registry=\"prometheus\""))
                 .body(containsString("jvm_classes_loaded_classes"));

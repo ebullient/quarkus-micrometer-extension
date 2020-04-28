@@ -6,7 +6,6 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.Config;
-import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
@@ -17,7 +16,6 @@ import io.quarkus.arc.DefaultBean;
 
 @Singleton
 public class PrometheusMeterRegistryProvider {
-    private static final Logger log = Logger.getLogger(PrometheusMeterRegistryProvider.class);
     static final String PREFIX = "quarkus.micrometer.export.prometheus.";
 
     @Produces
@@ -43,6 +41,7 @@ public class PrometheusMeterRegistryProvider {
 
     @Produces
     @Singleton
+    // Quarkus #8895 : @AlternativePriority(Interceptor.Priority.APPLICATION + 100)
     public PrometheusMeterRegistry registry(PrometheusConfig config, CollectorRegistry collectorRegistry, Clock clock) {
         return new PrometheusMeterRegistry(config, collectorRegistry, clock);
     }
