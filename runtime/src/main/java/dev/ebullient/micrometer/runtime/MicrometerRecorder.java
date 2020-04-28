@@ -25,30 +25,25 @@ public class MicrometerRecorder {
     private static final Logger log = Logger.getLogger(MicrometerRecorder.class);
     static final int TRIM_POS = "quarkus.micrometer.export.".length();
 
-    public void configureRegistry(Set<String> registryTypes, ShutdownContext context) {
-        log.debugf("Configuring Micrometer registries : %s", registryTypes);
+    public void configureRegistry(Set<Class<? extends MeterRegistry>> registryClasses, ShutdownContext context) {
+        log.debugf("Configuring Micrometer registries : %s", registryClasses);
 
         Instance<MeterRegistry> allRegistries = CDI.current().select(MeterRegistry.class, Any.Literal.INSTANCE);
         final MeterRegistry rootRegistry = allRegistries.get();
 
         // Filters to change/constrain construction/output of metrics
         // Customize registries by class or type
-        registryTypes.forEach(type -> {
+        registryClasses.forEach(typeClass -> {
             // @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters
-            Class<?> typeClass = getClassForName(type);
-            if (typeClass == null) {
-                log.warnf("Unable to configure %s. Class not found", type);
-            } else {
-                Instance<MeterFilter> classFilters = CDI.current().select(MeterFilter.class,
-                        new MeterFilterConstraint.Literal(typeClass));
-                Instance<?> typedRegistries = CDI.current().select(typeClass, Any.Literal.INSTANCE);
+            Instance<MeterFilter> classFilters = CDI.current().select(MeterFilter.class,
+                    new MeterFilterConstraint.Literal(typeClass));
+            Instance<? extends MeterRegistry> typedRegistries = allRegistries.select(typeClass, Any.Literal.INSTANCE);
 
-                log.debugf("Configuring %s instances. hasFilters=%s", type, !classFilters.isUnsatisfied());
-                if (!classFilters.isUnsatisfied() && !typedRegistries.isUnsatisfied()) {
-                    typedRegistries.forEach(registry -> {
-                        classFilters.forEach(((MeterRegistry) registry).config()::meterFilter);
-                    });
-                }
+            log.debugf("Configuring %s instances. hasFilters=%s", typeClass, !classFilters.isUnsatisfied());
+            if (!classFilters.isUnsatisfied() && !typedRegistries.isUnsatisfied()) {
+                typedRegistries.forEach(registry -> {
+                    classFilters.forEach(registry.config()::meterFilter);
+                });
             }
         });
 

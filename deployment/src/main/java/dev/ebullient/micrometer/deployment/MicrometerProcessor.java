@@ -139,9 +139,9 @@ public class MicrometerProcessor {
             List<MicrometerRegistryProviderBuildItem> providerClasses,
             ShutdownContextBuildItem shutdownContextBuildItem) {
 
-        Set<String> classNames = new HashSet<>();
-        providerClasses.forEach(x -> classNames.add(x.getRegistryClassName()));
-        recorder.configureRegistry(classNames, shutdownContextBuildItem);
+        Set<Class<? extends MeterRegistry>> typeClasses = new HashSet<>();
+        providerClasses.forEach(x -> typeClasses.add(x.getRegistryClass()));
+        recorder.configureRegistry(typeClasses, shutdownContextBuildItem);
     }
 
     public static boolean isInClasspath(String classname) {
