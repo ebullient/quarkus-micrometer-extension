@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.runtime;
+package dev.ebullient.micrometer.runtime.export;
 
 import java.util.Map;
 
@@ -8,6 +8,7 @@ import javax.inject.Singleton;
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.stackdriver.StackdriverConfig;
 import io.micrometer.stackdriver.StackdriverMeterRegistry;
@@ -21,10 +22,6 @@ public class StackdriverMeterRegistryProvider {
     static final String PUBLISH = "stackdriver.publish";
     static final String ENABLED = "stackdriver.enabled";
 
-    StackdriverMeterRegistryProvider() {
-        log.debug("StackdriverMeterRegistryProvider initialized");
-    }
-
     @Produces
     @Singleton
     @DefaultBean
@@ -32,7 +29,7 @@ public class StackdriverMeterRegistryProvider {
         final Map<String, String> properties = MicrometerRecorder.captureProperties(config, PREFIX);
 
         // Special check: if publish is set, override the value of enabled
-        // Specifically, The stackdriver registry must be enabled for this
+        // Specifically, the stackdriver registry must be enabled for this
         // Provider to even be present. If this instance (at runtime) wants
         // to prevent metrics from being published, then it would set
         // quarkus.micrometer.export.stackdriver.publish=false
@@ -50,7 +47,6 @@ public class StackdriverMeterRegistryProvider {
 
     @Produces
     @Singleton
-    @DefaultBean
     public StackdriverMeterRegistry registry(StackdriverConfig config, Clock clock) {
         return new StackdriverMeterRegistry(config, clock);
     }

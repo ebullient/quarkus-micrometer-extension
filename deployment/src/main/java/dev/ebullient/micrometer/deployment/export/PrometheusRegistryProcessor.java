@@ -1,13 +1,16 @@
-package dev.ebullient.micrometer.deployment;
+package dev.ebullient.micrometer.deployment.export;
 
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.deployment.MicrometerBuildTimeConfig;
+import dev.ebullient.micrometer.deployment.MicrometerProcessor;
+import dev.ebullient.micrometer.deployment.MicrometerRegistryProviderBuildItem;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
-import dev.ebullient.micrometer.runtime.PrometheusMeterRegistryProvider;
-import dev.ebullient.micrometer.runtime.PrometheusScrapeHandler;
+import dev.ebullient.micrometer.runtime.export.PrometheusMeterRegistryProvider;
+import dev.ebullient.micrometer.runtime.export.PrometheusRecorder;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -90,11 +93,11 @@ public class PrometheusRegistryProcessor {
     }
 
     @BuildStep(onlyIf = PrometheusEnabled.class, loadsApplicationClasses = true)
-    @Record(ExecutionTime.STATIC_INIT)
+    @Record(ExecutionTime.RUNTIME_INIT)
     void createPrometheusRoute(BuildProducer<RouteBuildItem> routes,
             HttpRootPathBuildItem httpRoot,
             PrometheusBuildTimeConfig pConfig,
-            MicrometerRecorder recorder) {
+            PrometheusRecorder recorder) {
 
         // TODO: remove this when the onlyIf check can do this
         // Double check that Prometheus registry is on the classpath
@@ -104,7 +107,7 @@ public class PrometheusRegistryProcessor {
 
         log.debug("PROMETHEUS CONFIG: " + pConfig);
         // set up prometheus scrape endpoint
-        Handler<RoutingContext> handler = new PrometheusScrapeHandler();
+        Handler<RoutingContext> handler = recorder.createPrometheusScrapeHandler();
 
         // Exact match for resources matched to the root path
         routes.produce(new RouteBuildItem(pConfig.path, handler));

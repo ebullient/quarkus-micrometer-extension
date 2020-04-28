@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.runtime;
+package dev.ebullient.micrometer.runtime.export;
 
 import java.util.Map;
 
@@ -8,6 +8,7 @@ import javax.inject.Singleton;
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 import io.micrometer.jmx.JmxConfig;
@@ -17,12 +18,7 @@ import io.quarkus.arc.DefaultBean;
 @Singleton
 public class JmxMeterRegistryProvider {
     private static final Logger log = Logger.getLogger(JmxMeterRegistryProvider.class);
-
     static final String PREFIX = "quarkus.micrometer.export.jmx.";
-
-    JmxMeterRegistryProvider() {
-        log.debug("JmxMeterRegistryProvider initialized");
-    }
 
     @Produces
     @Singleton
@@ -47,7 +43,6 @@ public class JmxMeterRegistryProvider {
 
     @Produces
     @Singleton
-    @DefaultBean
     public JmxMeterRegistry registry(JmxConfig config, Clock clock, HierarchicalNameMapper nameMapper) {
         return new JmxMeterRegistry(config, clock, nameMapper);
     }

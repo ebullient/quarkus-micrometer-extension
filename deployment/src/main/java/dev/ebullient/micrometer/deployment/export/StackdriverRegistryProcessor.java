@@ -1,12 +1,15 @@
-package dev.ebullient.micrometer.deployment;
+package dev.ebullient.micrometer.deployment.export;
 
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.deployment.MicrometerBuildTimeConfig;
+import dev.ebullient.micrometer.deployment.MicrometerProcessor;
+import dev.ebullient.micrometer.deployment.MicrometerRegistryProviderBuildItem;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
-import dev.ebullient.micrometer.runtime.StackdriverMeterRegistryProvider;
+import dev.ebullient.micrometer.runtime.export.StackdriverMeterRegistryProvider;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;

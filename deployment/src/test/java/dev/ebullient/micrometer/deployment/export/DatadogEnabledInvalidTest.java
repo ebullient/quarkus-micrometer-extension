@@ -1,9 +1,8 @@
-package dev.ebullient.micrometer.deployment;
+package dev.ebullient.micrometer.deployment.export;
 
 import javax.inject.Inject;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
-import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -20,12 +19,11 @@ public class DatadogEnabledInvalidTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
+            .withConfigurationResource("test-logging.properties")
+            .overrideConfigKey("quarkus.micrometer.export.datadog.enabled", "true")
+            .overrideConfigKey("quarkus.micrometer.registry-enabled-default", "false")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
-                    .addClass(DatadogRegistryProcessor.REGISTRY_CLASS)
-                    .addAsResource(new StringAsset(
-                            "quarkus.micrometer.export.datadog.enabled=true\n"
-                                    + "quarkus.micrometer.registry-enabled-default=false\n"),
-                            "application.properties"))
+                    .addClass(DatadogRegistryProcessor.REGISTRY_CLASS))
             .assertException(t -> {
                 Assertions.assertEquals(MissingRequiredConfigurationException.class.getName(), t.getClass().getName());
             });

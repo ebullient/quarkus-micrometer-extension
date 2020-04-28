@@ -1,28 +1,32 @@
 package dev.ebullient.micrometer.deployment;
 
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 
-import javax.enterprise.inject.Produces;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import javax.interceptor.Interceptor.Priority;
-
-import org.jboss.logging.Logger;
+import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTarget;
+import org.jboss.jandex.DotName;
+import org.jboss.jandex.FieldInfo;
+import org.jboss.jandex.IndexView;
+import org.jboss.jandex.MethodInfo;
 
 import dev.ebullient.micrometer.runtime.ClockProvider;
-import dev.ebullient.micrometer.runtime.JvmMetricsProvider;
+import dev.ebullient.micrometer.runtime.CompositeRegistryCreator;
+import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
+import dev.ebullient.micrometer.runtime.MeterFilterConstraints;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
-import dev.ebullient.micrometer.runtime.NoopMeterRegistryProvider;
-import dev.ebullient.micrometer.runtime.SystemMetricsProvider;
-import io.micrometer.core.instrument.Clock;
+import dev.ebullient.micrometer.runtime.binder.JvmMetricsProvider;
+import dev.ebullient.micrometer.runtime.binder.SystemMetricsProvider;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import io.quarkus.arc.AlternativePriority;
+import io.micrometer.core.instrument.binder.MeterBinder;
+import io.micrometer.core.instrument.config.MeterFilter;
+import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
-import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
+import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
+import io.quarkus.arc.processor.DotNames;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
@@ -31,15 +35,12 @@ import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
-import io.quarkus.gizmo.ClassCreator;
-import io.quarkus.gizmo.FieldCreator;
-import io.quarkus.gizmo.FieldDescriptor;
-import io.quarkus.gizmo.MethodCreator;
-import io.quarkus.gizmo.MethodDescriptor;
-import io.quarkus.gizmo.ResultHandle;
 
-class MicrometerProcessor {
-    private static final Logger log = Logger.getLogger(MicrometerProcessor.class);
+public class MicrometerProcessor {
+    private static final DotName METER_REGISTRY = DotName.createSimple(MeterRegistry.class.getName());
+    private static final DotName METER_BINDER = DotName.createSimple(MeterBinder.class.getName());
+    private static final DotName METER_FILTER = DotName.createSimple(MeterFilter.class.getName());
+    private static final DotName NAMING_CONVENTION = DotName.createSimple(NamingConvention.class.getName());
 
     private static final String FEATURE = "micrometer";
 
@@ -63,15 +64,14 @@ class MicrometerProcessor {
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
     void addMicrometerDependencies(BuildProducer<IndexDependencyBuildItem> indexDependency) {
-        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-core"));
-        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-prometheus"));
-        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer", "micrometer-registry-stackdriver"));
+        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer",
+        // "micrometer-core"));
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
-    void registerAdditionalBeans(CombinedIndexBuildItem index,
-            BuildProducer<AdditionalBeanBuildItem> additionalBeans,
-            BuildProducer<MicrometerRegistryProviderBuildItem> additionalRegistryProviders) {
+    UnremovableBeanBuildItem registerAdditionalBeans(CombinedIndexBuildItem indexBuildItem,
+            BuildProducer<MicrometerRegistryProviderBuildItem> providerClasses,
+            BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 
         // Create and keep JVM/System MeterBinders
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
@@ -79,86 +79,72 @@ class MicrometerProcessor {
                 .addBeanClass(ClockProvider.class)
                 .addBeanClass(JvmMetricsProvider.class)
                 .addBeanClass(SystemMetricsProvider.class)
+                .addBeanClass(CompositeRegistryCreator.class)
+                .addBeanClass(MeterFilterConstraint.class)
+                .addBeanClass(MeterFilterConstraints.class)
                 .build());
 
-        // Find customizers, binders, and custom provider registries
-    }
+        IndexView index = indexBuildItem.getIndex();
 
-    @BuildStep(onlyIf = MicrometerEnabled.class)
-    void createRootRegistry(List<MicrometerRegistryProviderBuildItem> providerClasses,
-            BuildProducer<GeneratedBeanBuildItem> beanProducer,
-            BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
+        // Find classes that define MeterRegistries, MeterBinders, and MeterFilters
+        Collection<String> knownRegistries = new HashSet<>();
+        index.getAllKnownSubclasses(METER_REGISTRY).forEach(x -> knownRegistries.add(x.name().toString()));
 
-        if (providerClasses.isEmpty()) {
-            // No MeterRegistries found. Create a no-op Composite for CDI injection
-            additionalBeans.produce(AdditionalBeanBuildItem.builder().setUnremovable()
-                    .addBeanClass(NoopMeterRegistryProvider.class).build());
-        } else if (providerClasses.size() > 1) {
-            // Many MeterRegistries found
-            // Create a CompositeMeterRegistry, and add enabled MeterRegistry beans
-            GeneratedBeanGizmoAdaptor gizmoAdaptor = new GeneratedBeanGizmoAdaptor(beanProducer);
+        Collection<String> knownClasses = new HashSet<>();
+        knownClasses.add(METER_BINDER.toString());
+        index.getAllKnownImplementors(METER_BINDER).forEach(x -> knownClasses.add(x.name().toString()));
+        knownClasses.add(METER_FILTER.toString());
+        index.getAllKnownImplementors(METER_FILTER).forEach(x -> knownClasses.add(x.name().toString()));
+        knownClasses.add(NAMING_CONVENTION.toString());
+        index.getAllKnownImplementors(NAMING_CONVENTION).forEach(x -> knownClasses.add(x.name().toString()));
 
-            String name = this.getClass().getPackage().getName() + ".CompositeMicrometerRegistryProvider";
-            try (ClassCreator classCreator = ClassCreator.builder().className(name).classOutput(gizmoAdaptor).build()) {
-                classCreator.addAnnotation(Singleton.class);
+        Set<String> keepMe = new HashSet<>();
 
-                List<FieldDescriptor> listFields = new ArrayList<>();
-
-                int i = 0;
-                // create fields to allow all other known/enabled registry beans to be injected
-                for (MicrometerRegistryProviderBuildItem provider : providerClasses) {
-                    FieldCreator injected = classCreator.getFieldCreator("registry_" + i,
-                            provider.getProvidedRegistryClass().getName());
-                    injected.addAnnotation(Inject.class);
-                    injected.setModifiers(0);
-                    listFields.add(injected.getFieldDescriptor());
-                }
-
-                // @Produces
-                try (MethodCreator createCompositeRegistry = classCreator.getMethodCreator("createCompositeRegistry",
-                        MeterRegistry.class, Clock.class)) {
-                    createCompositeRegistry.addAnnotation(Produces.class);
-                    createCompositeRegistry.addAnnotation(Singleton.class);
-
-                    // The composite takes precedence over all registries
-                    createCompositeRegistry.addAnnotation(AlternativePriority.class).addValue("value",
-                            Priority.PLATFORM_AFTER);
-
-                    // create the composite registry
-                    ResultHandle compositeRegistry = createCompositeRegistry.newInstance(
-                            MethodDescriptor.ofConstructor(CompositeMeterRegistry.class, Clock.class),
-                            createCompositeRegistry.getMethodParam(0));
-
-                    // add injected registries to the composite
-                    MethodDescriptor addRegistry = MethodDescriptor.ofMethod(CompositeMeterRegistry.class, "add",
-                            CompositeMeterRegistry.class, MeterRegistry.class);
-                    for (FieldDescriptor fd : listFields) {
-                        ResultHandle arg = createCompositeRegistry.readInstanceField(fd, createCompositeRegistry.getThis());
-                        createCompositeRegistry.invokeVirtualMethod(addRegistry, compositeRegistry, arg);
+        // Find and keep _producers_ of those MeterRegistries, MeterBinders, and
+        // MeterFilters
+        for (AnnotationInstance annotation : index.getAnnotations(DotNames.PRODUCES)) {
+            AnnotationTarget target = annotation.target();
+            switch (target.kind()) {
+                case METHOD:
+                    MethodInfo method = target.asMethod();
+                    String returnType = method.returnType().name().toString();
+                    if (knownRegistries.contains(returnType)) {
+                        providerClasses.produce(new MicrometerRegistryProviderBuildItem(returnType));
+                        keepMe.add(method.declaringClass().name().toString());
+                    } else if (knownClasses.contains(returnType)) {
+                        keepMe.add(method.declaringClass().name().toString());
                     }
-
-                    // all done!
-                    createCompositeRegistry.returnValue(compositeRegistry);
-                }
+                    break;
+                case FIELD:
+                    FieldInfo field = target.asField();
+                    String fieldType = field.type().name().toString();
+                    if (knownRegistries.contains(fieldType)) {
+                        providerClasses.produce(new MicrometerRegistryProviderBuildItem(fieldType));
+                        keepMe.add(field.declaringClass().name().toString());
+                    } else if (knownClasses.contains(fieldType)) {
+                        keepMe.add(field.declaringClass().name().toString());
+                    }
+                    break;
+                default:
+                    break;
             }
         }
+
+        return new UnremovableBeanBuildItem(new UnremovableBeanBuildItem.BeanClassNamesExclusion(keepMe));
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.RUNTIME_INIT)
-    void configureRegistry(MicrometerRecorder recorder, ShutdownContextBuildItem shutdownContextBuildItem) {
-        recorder.configureRegistry(shutdownContextBuildItem);
+    void configureRegistry(MicrometerRecorder recorder,
+            List<MicrometerRegistryProviderBuildItem> providerClasses,
+            ShutdownContextBuildItem shutdownContextBuildItem) {
+
+        Set<Class<? extends MeterRegistry>> typeClasses = new HashSet<>();
+        providerClasses.forEach(x -> typeClasses.add(x.getRegistryClass()));
+        recorder.configureRegistry(typeClasses, shutdownContextBuildItem);
     }
 
-    static boolean isInClasspath(String classname) {
-        log.debug("findClass TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname);
-        try {
-            Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
-            return true;
-        } catch (ClassNotFoundException e) {
-            log.debug("findClass TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname + ": false");
-            return false;
-        }
+    public static boolean isInClasspath(String classname) {
+        return MicrometerRecorder.getClassForName(classname) != null;
     }
-
 }

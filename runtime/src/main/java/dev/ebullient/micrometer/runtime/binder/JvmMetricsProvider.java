@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.runtime;
+package dev.ebullient.micrometer.runtime.binder;
 
 import javax.enterprise.inject.Default;
 import javax.enterprise.inject.Produces;

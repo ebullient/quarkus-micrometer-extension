@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.deployment;
+package dev.ebullient.micrometer.deployment.export;
 
 import javax.inject.Inject;
 
@@ -20,8 +20,12 @@ public class AllRegistriesDisabledTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
-            .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
-                    .addAsResource("disable-all-registries.properties", "application.properties"));
+            .withConfigurationResource("test-logging.properties")
+            .overrideConfigKey("quarkus.micrometer.export.datadog.enabled", "false")
+            .overrideConfigKey("quarkus.micrometer.export.jmx.enabled", "false")
+            .overrideConfigKey("quarkus.micrometer.export.prometheus.enabled", "false")
+            .overrideConfigKey("quarkus.micrometer.export.stackdriver.enabled", "false")
+            .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class));
 
     @Inject
     MeterRegistry registry;
@@ -30,8 +34,7 @@ public class AllRegistriesDisabledTest {
     public void testMeterRegistryPresent() {
         // Composite Meter Registry
         Assertions.assertNotNull(registry, "A registry should be configured");
-        Assertions.assertTrue(registry instanceof CompositeMeterRegistry,
-                "Injected registry should be a CompositeMeterRegistry, was " + registry.getClass().getName());
+        Assertions.assertEquals(CompositeMeterRegistry.class, registry.getClass(), "Should be CompositeMeterRegistry");
     }
 
     @Test

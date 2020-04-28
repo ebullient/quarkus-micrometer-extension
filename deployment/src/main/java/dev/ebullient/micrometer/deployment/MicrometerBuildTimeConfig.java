@@ -10,7 +10,7 @@ import io.quarkus.runtime.annotations.ConfigRoot;
  * Global configuration for the Micrometer extension
  */
 @ConfigRoot(name = "micrometer", phase = ConfigPhase.BUILD_TIME)
-final class MicrometerBuildTimeConfig {
+public final class MicrometerBuildTimeConfig {
 
     /**
      * If the micrometer extension is enabled.

@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.runtime;
+package dev.ebullient.micrometer.runtime.export;
 
 import java.util.Map;
 
@@ -8,6 +8,7 @@ import javax.inject.Singleton;
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.datadog.DatadogConfig;
 import io.micrometer.datadog.DatadogMeterRegistry;
@@ -19,10 +20,6 @@ public class DatadogMeterRegistryProvider {
     static final String PREFIX = "quarkus.micrometer.export.datadog.";
     static final String PUBLISH = "datadog.publish";
     static final String ENABLED = "datadog.enabled";
-
-    DatadogMeterRegistryProvider() {
-        log.debug("DatadogMeterRegistryProvider initialized");
-    }
 
     @Produces
     @Singleton
@@ -49,7 +46,6 @@ public class DatadogMeterRegistryProvider {
 
     @Produces
     @Singleton
-    @DefaultBean
     public DatadogMeterRegistry registry(DatadogConfig config, Clock clock) {
         return DatadogMeterRegistry.builder(config)
                 .clock(clock)

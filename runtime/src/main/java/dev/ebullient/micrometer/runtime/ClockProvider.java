@@ -8,7 +8,6 @@ import io.quarkus.arc.DefaultBean;
 
 @Singleton
 public class ClockProvider {
-
     @Produces
     @Singleton
     @DefaultBean

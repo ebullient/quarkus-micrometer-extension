@@ -1,9 +1,8 @@
-package dev.ebullient.micrometer.deployment;
+package dev.ebullient.micrometer.deployment.export;
 
 import javax.inject.Inject;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
-import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -19,14 +18,13 @@ public class StackdriverEnabledTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
+            .withConfigurationResource("test-logging.properties")
+            .overrideConfigKey("quarkus.micrometer.export.stackdriver.enabled", "true")
+            .overrideConfigKey("quarkus.micrometer.export.stackdriver.publish", "false")
+            .overrideConfigKey("quarkus.micrometer.export.stackdriver.project-id", "myproject")
+            .overrideConfigKey("quarkus.micrometer.registry-enabled-default", "false")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
-                    .addClass(StackdriverRegistryProcessor.REGISTRY_CLASS)
-                    .addAsResource(new StringAsset(
-                            "quarkus.micrometer.export.stackdriver.enabled=true\n"
-                                    + "quarkus.micrometer.registry-enabled-default=false\n"
-                                    + "quarkus.micrometer.export.stackdriver.publish=false\n"
-                                    + "quarkus.micrometer.export.stackdriver.project-id=myproject"),
-                            "application.properties"));
+                    .addClass(StackdriverRegistryProcessor.REGISTRY_CLASS));
 
     @Inject
     MeterRegistry registry;
