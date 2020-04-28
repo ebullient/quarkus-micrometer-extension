@@ -15,6 +15,8 @@ import org.jboss.jandex.MethodInfo;
 
 import dev.ebullient.micrometer.runtime.ClockProvider;
 import dev.ebullient.micrometer.runtime.CompositeRegistryCreator;
+import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
+import dev.ebullient.micrometer.runtime.MeterFilterConstraints;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.binder.JvmMetricsProvider;
 import dev.ebullient.micrometer.runtime.binder.SystemMetricsProvider;
@@ -78,6 +80,8 @@ public class MicrometerProcessor {
                 .addBeanClass(JvmMetricsProvider.class)
                 .addBeanClass(SystemMetricsProvider.class)
                 .addBeanClass(CompositeRegistryCreator.class)
+                .addBeanClass(MeterFilterConstraint.class)
+                .addBeanClass(MeterFilterConstraints.class)
                 .build());
 
         IndexView index = indexBuildItem.getIndex();

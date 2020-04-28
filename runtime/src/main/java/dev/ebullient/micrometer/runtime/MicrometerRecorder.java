@@ -1,14 +1,12 @@
 package dev.ebullient.micrometer.runtime;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import javax.enterprise.inject.Any;
+import javax.enterprise.inject.Default;
 import javax.enterprise.inject.Instance;
-import javax.enterprise.inject.spi.Bean;
-import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.CDI;
 
 import org.eclipse.microprofile.config.Config;
@@ -30,48 +28,39 @@ public class MicrometerRecorder {
     public void configureRegistry(Set<String> registryTypes, ShutdownContext context) {
         log.debugf("Configuring Micrometer registries : %s", registryTypes);
 
-        final MeterRegistry rootRegistry = CDI.current().select(MeterRegistry.class).get();
-        final BeanManager beanManager = CDI.current().getBeanManager();
+        Instance<MeterRegistry> allRegistries = CDI.current().select(MeterRegistry.class, Any.Literal.INSTANCE);
+        final MeterRegistry rootRegistry = allRegistries.get();
 
-        Set<Bean<?>> allMeterFilters = new HashSet<>(beanManager.getBeans(MeterFilter.class, Any.Literal.INSTANCE));
-        for (Bean<?> bean : allMeterFilters) {
-            System.out.println(bean + " : " + bean.getQualifiers());
+        // Customize individual filter types
+        registryTypes.forEach(type -> {
+            // @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters
+            Class<?> typeClass = getClassForName(type);
+            if (typeClass == null) {
+                log.warnf("Unable to configure %s. Class not found", type);
+            } else {
+                Instance<MeterFilter> classFilters = CDI.current().select(MeterFilter.class,
+                        new MeterFilterConstraint.Literal(typeClass));
+                Instance<?> typedRegistries = CDI.current().select(typeClass, Any.Literal.INSTANCE);
+
+                log.debugf("Configuring %s instances. hasFilters=%s", type, !classFilters.isUnsatisfied());
+                if (!classFilters.isUnsatisfied() && !typedRegistries.isUnsatisfied()) {
+                    typedRegistries.forEach(registry -> {
+                        classFilters.forEach(((MeterRegistry) registry).config()::meterFilter);
+                    });
+                }
+            }
+        });
+
+        // Filters to change/constrain construction/output of metrics
+        Instance<MeterFilter> filters = CDI.current().select(MeterFilter.class, Default.Literal.INSTANCE);
+        log.debugf("Configuring all registries. hasFilters=%s", !filters.isUnsatisfied());
+        if (!filters.isUnsatisfied()) {
+            allRegistries.forEach(registry -> {
+                filters.forEach(registry.config()::meterFilter);
+            });
         }
 
-        Set<Bean<?>> allMeterRegistries = new HashSet<>(beanManager.getBeans(MeterRegistry.class, Any.Literal.INSTANCE));
-        for (Bean<?> bean : allMeterRegistries) {
-            System.out.println(bean + " : " + bean.getQualifiers());
-        }
-
-        // final Instance<MeterFilter> allMeterFilters = CDI.current().select(MeterFilter.class, Any.Literal.INSTANCE);
-        // allMeterFilters.forEach(System.out::println);
-
-        // registryTypes.forEach(type -> {
-        //     // @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters
-        //     Class<?> typeClass = getClassForName(type);
-        //     if (typeClass == null) {
-        //         log.warnf("Unable to configure %s. Class not found", type);
-        //     } else {
-        //         Instance<MeterFilter> classFilters = allMeterFilters
-        //                 .select(new Annotations.MeterFilterConstraintLiteral(typeClass));
-
-        //         log.debugf("Configuring %s instances. hasFilters=%s", type, !classFilters.isUnsatisfied());
-        //         if (!classFilters.isUnsatisfied()) {
-        //             classFilters.forEach((x) -> System.out.println(x));
-        //         }
-        //         // Class<? extends MeterRegistry> registryClass = (Class<? extends MeterRegistry>) getClassForName(type);
-        //         // Instance<? extends MeterRegistry> typeRegistries = allRegistries.select(registryClass, Any.Literal.INSTANCE);
-        //     }
-        // });
-
-        // log.debugf("Configuring root registry : %s", rootRegistry);
-
-        // // Filters to change/constrain construction/output of metrics
-        // Instance<MeterFilter> filters = allMeterFilters.select(Default.Literal.INSTANCE);
-        // log.debugf("Configuring all registries. hasFilters=%s", !filters.isUnsatisfied());
-        // if (!filters.isUnsatisfied()) {
-        //     filters.forEach((x) -> System.out.println(x));
-        // }
+        log.debugf("Configuring root registry : %s", rootRegistry);
 
         Instance<NamingConvention> convention = CDI.current().select(NamingConvention.class);
         if (convention.isResolvable()) {

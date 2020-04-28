@@ -33,6 +33,7 @@ class PrometheusMetricsRegistryTest {
                 // .log().body()
                 .statusCode(200)
                 .body(containsString("registry=\"prometheus\""))
+                .body(containsString("env=\"test\""))
                 .body(containsString("jvm_classes_loaded_classes"));
     }
 }
