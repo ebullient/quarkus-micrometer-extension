@@ -31,7 +31,8 @@ public class MicrometerRecorder {
         Instance<MeterRegistry> allRegistries = CDI.current().select(MeterRegistry.class, Any.Literal.INSTANCE);
         final MeterRegistry rootRegistry = allRegistries.get();
 
-        // Customize individual filter types
+        // Filters to change/constrain construction/output of metrics
+        // Customize registries by class or type
         registryTypes.forEach(type -> {
             // @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters
             Class<?> typeClass = getClassForName(type);
@@ -51,7 +52,7 @@ public class MicrometerRecorder {
             }
         });
 
-        // Filters to change/constrain construction/output of metrics
+        // Customize all registries (global/common tags, e.g.)
         Instance<MeterFilter> filters = CDI.current().select(MeterFilter.class, Default.Literal.INSTANCE);
         log.debugf("Configuring all registries. hasFilters=%s", !filters.isUnsatisfied());
         if (!filters.isUnsatisfied()) {
@@ -61,7 +62,6 @@ public class MicrometerRecorder {
         }
 
         log.debugf("Configuring root registry : %s", rootRegistry);
-
         Instance<NamingConvention> convention = CDI.current().select(NamingConvention.class);
         if (convention.isResolvable()) {
             rootRegistry.config().namingConvention(convention.get());
