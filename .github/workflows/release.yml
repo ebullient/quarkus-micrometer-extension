@@ -17,15 +17,15 @@ jobs:
 
       - uses: actions/setup-java@v1
         with:
-          java-version: 1.8
+          java-version: 11
 
       - name: Publish package
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          VERSION=$(./mvnw -B help:evaluate -Dexpression=project.version | grep -v INFO)
+          VERSION=$(./mvnw -B --no-transfer-progress help:evaluate -Dexpression=project.version | grep -v INFO)
           echo $VERSION
           if [[ $VERSION == [.0-9]* ]]; then
-            mvn -B deploy
+            mvn -B --no-transfer-progress deploy
           fi
