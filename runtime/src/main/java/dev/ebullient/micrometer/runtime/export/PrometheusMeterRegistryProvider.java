@@ -33,7 +33,6 @@ public class PrometheusMeterRegistryProvider {
     }
 
     @Produces
-    @Singleton
     @DefaultBean
     public CollectorRegistry collectorRegistry() {
         return new CollectorRegistry(true);
