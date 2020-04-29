@@ -6,7 +6,6 @@ import java.util.function.BooleanSupplier;
 import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.deployment.MicrometerBuildTimeConfig;
-import dev.ebullient.micrometer.deployment.MicrometerProcessor;
 import dev.ebullient.micrometer.deployment.MicrometerRegistryProviderBuildItem;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.export.StackdriverMeterRegistryProvider;
@@ -51,12 +50,7 @@ public class StackdriverRegistryProcessor {
         StackdriverBuildTimeConfig config;
 
         public boolean getAsBoolean() {
-            boolean enabled = false;
-            // TODO: Can't yet check for classes on the classpath in supplier
-            //if (MicrometerProcessor.isInClasspath(REGISTRY_CLASS_NAME)) {
-            enabled = mConfig.checkEnabledWithDefault(config.enabled);
-            //}
-            return enabled;
+            return REGISTRY_CLASS != null && mConfig.checkEnabledWithDefault(config.enabled);
         }
     }
 
@@ -70,12 +64,6 @@ public class StackdriverRegistryProcessor {
     @BuildStep(onlyIf = StackdriverEnabled.class, onlyIfNot = NativeBuild.class, loadsApplicationClasses = true)
     MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
-
-        // TODO: remove this when the onlyIf check can do this
-        // Double check that Stackdriver registry is on the classpath
-        if (!MicrometerProcessor.isInClasspath(REGISTRY_CLASS_NAME)) {
-            return null;
-        }
 
         // Add the Stackdriver Registry Producer
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
