@@ -10,7 +10,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.config.MissingRequiredConfigurationException;
+import io.micrometer.core.instrument.config.validate.ValidationException;
 import io.quarkus.test.QuarkusUnitTest;
 
 public class StackdriverEnabledInvalidTest {
@@ -25,7 +25,7 @@ public class StackdriverEnabledInvalidTest {
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClass(StackdriverRegistryProcessor.REGISTRY_CLASS))
             .assertException(t -> {
-                Assertions.assertEquals(MissingRequiredConfigurationException.class.getName(), t.getClass().getName());
+                Assertions.assertEquals(ValidationException.class.getName(), t.getClass().getName());
             });
 
     @Inject
