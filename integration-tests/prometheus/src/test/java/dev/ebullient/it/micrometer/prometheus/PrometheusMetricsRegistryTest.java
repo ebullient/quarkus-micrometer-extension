@@ -3,20 +3,24 @@ package dev.ebullient.it.micrometer.prometheus;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.containsString;
 
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * tests that application.properties is read from src/test/resources
- *
- * This does not necessarily belong here, but main and test-extension have a lot of existing
- * config that would need to be duplicated, so it is here out of convenience.
+ * Test functioning prometheus endpoint.
+ * Use test execution order to ensure one http server request measurement
+ * is present when the endpoint is scraped.
  */
 @QuarkusTest
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class PrometheusMetricsRegistryTest {
 
     @Test
+    @Order(1)
     void testRegistryInjection() {
         given()
                 .when().get("/message")
@@ -26,14 +30,15 @@ class PrometheusMetricsRegistryTest {
     }
 
     @Test
+    @Order(2)
     void testPrometheusScrapeEndpoint() {
         given()
                 .when().get("/prometheus")
                 .then()
-                // .log().body()
+                .log().body()
                 .statusCode(200)
                 .body(containsString("registry=\"prometheus\""))
                 .body(containsString("env=\"test\""))
-                .body(containsString("jvm_classes_loaded_classes"));
+                .body(containsString("http_server_requests"));
     }
 }

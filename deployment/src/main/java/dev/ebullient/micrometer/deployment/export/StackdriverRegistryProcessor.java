@@ -50,7 +50,7 @@ public class StackdriverRegistryProcessor {
         StackdriverBuildTimeConfig config;
 
         public boolean getAsBoolean() {
-            return REGISTRY_CLASS != null && mConfig.checkEnabledWithDefault(config.enabled);
+            return REGISTRY_CLASS != null && mConfig.checkRegistryEnabledWithDefault(config.enabled);
         }
     }
 

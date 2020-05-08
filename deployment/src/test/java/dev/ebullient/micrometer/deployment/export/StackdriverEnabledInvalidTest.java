@@ -22,6 +22,7 @@ public class StackdriverEnabledInvalidTest {
             .withConfigurationResource("test-logging.properties")
             .overrideConfigKey("quarkus.micrometer.export.stackdriver.enabled", "true")
             .overrideConfigKey("quarkus.micrometer.registry-enabled-default", "false")
+            .overrideConfigKey("quarkus.micrometer.binder-enabled-default", "false")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClass(StackdriverRegistryProcessor.REGISTRY_CLASS))
             .assertException(t -> {

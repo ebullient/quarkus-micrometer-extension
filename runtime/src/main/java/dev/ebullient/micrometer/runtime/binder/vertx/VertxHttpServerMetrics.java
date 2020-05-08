@@ -13,6 +13,7 @@
  */
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
+import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinder.VertxHttpMetricsConfig;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -23,10 +24,16 @@ import io.vertx.core.spi.metrics.HttpServerMetrics;
 public class VertxHttpServerMetrics
         implements HttpServerMetrics<MeasureRequest, MeasureWebSocket, MeasureHttpSocket> {
 
+    final VertxHttpMetricsConfig httpMetricsConfig;
+
+    public VertxHttpServerMetrics(VertxHttpMetricsConfig httpMetricsConfig) {
+        this.httpMetricsConfig = httpMetricsConfig;
+    }
+
     /** -> MeasureHttpSocket */
     @Override
     public MeasureHttpSocket connected(SocketAddress remoteAddress, String remoteName) {
-        return new MeasureHttpSocket(remoteAddress, remoteName);
+        return new MeasureHttpSocket(httpMetricsConfig, remoteAddress, remoteName);
     }
 
     /** MeasureHttpSocket */
@@ -50,7 +57,7 @@ public class VertxHttpServerMetrics
     /** MeasureHttpSocket -> MeasureRequest */
     @Override
     public MeasureRequest requestBegin(MeasureHttpSocket socketMetric, HttpServerRequest request) {
-        return new MeasureRequest(socketMetric, request);
+        return new MeasureRequest(httpMetricsConfig, socketMetric, request);
     }
 
     /** MeasureRequest */
@@ -75,14 +82,14 @@ public class VertxHttpServerMetrics
     @Override
     public MeasureRequest responsePushed(MeasureHttpSocket socketMetric, HttpMethod method, String uri,
             HttpServerResponse response) {
-        return new MeasureRequest(socketMetric).responsePushed(method, uri, response);
+        return new MeasureRequest(httpMetricsConfig, socketMetric).responsePushed(method, uri, response);
     }
 
     /** MeasureHttpSocket & MeasureRequest -> MeasureWebSocket */
     @Override
     public MeasureWebSocket connected(MeasureHttpSocket socketMetric, MeasureRequest requestMetric,
             ServerWebSocket serverWebSocket) {
-        return new MeasureWebSocket(requestMetric, serverWebSocket);
+        return new MeasureWebSocket(httpMetricsConfig, requestMetric, serverWebSocket);
     }
 
     /** MeasureWebSocket */

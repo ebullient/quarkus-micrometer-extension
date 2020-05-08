@@ -25,11 +25,17 @@ public final class MicrometerBuildTimeConfig {
     public boolean registryEnabledDefault;
 
     /**
+     * Global default value for discovered MeterBinders
+     */
+    @ConfigItem(defaultValue = "true")
+    public boolean binderEnabledDefault;
+
+    /**
      * For Meter Registry configurations with optional 'enabled' attributes,
      * determine whether or not the registry is enabled using {@link #registryEnabledDefault}
      * as the default value.
      */
-    public boolean checkEnabledWithDefault(Optional<Boolean> configValue) {
+    public boolean checkRegistryEnabledWithDefault(Optional<Boolean> configValue) {
         if (enabled) {
             if (configValue.isPresent()) {
                 return configValue.get();
@@ -40,10 +46,27 @@ public final class MicrometerBuildTimeConfig {
         return false;
     }
 
+    /**
+     * For Meter Binder configurations with optional 'enabled' attributes,
+     * determine whether or not the binder is enabled using {@link #binderEnabledDefault}
+     * as the default value.
+     */
+    public boolean checkBinderEnabledWithDefault(Optional<Boolean> configValue) {
+        if (enabled) {
+            if (configValue.isPresent()) {
+                return configValue.get();
+            } else {
+                return binderEnabledDefault;
+            }
+        }
+        return false;
+    }
+
     @Override
     public String toString() {
         return this.getClass().getSimpleName()
                 + "{enabled=" + enabled
+                + ",binderEnabledDefault=" + binderEnabledDefault
                 + ",registryEnabledDefault=" + registryEnabledDefault
                 + '}';
     }

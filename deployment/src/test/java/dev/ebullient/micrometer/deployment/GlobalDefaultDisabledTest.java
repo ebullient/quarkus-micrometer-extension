@@ -3,7 +3,6 @@ package dev.ebullient.micrometer.deployment;
 import javax.inject.Inject;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
-import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -21,9 +20,10 @@ public class GlobalDefaultDisabledTest {
 
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
-            .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
-                    .addAsResource(new StringAsset("quarkus.micrometer.registry-enabled-default=false"),
-                            "application.properties"));
+            .withConfigurationResource("test-logging.properties")
+            .overrideConfigKey("quarkus.micrometer.registry-enabled-default", "false")
+            .overrideConfigKey("quarkus.micrometer.binder-enabled-default", "false")
+            .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class));
 
     @Inject
     MeterRegistry registry;

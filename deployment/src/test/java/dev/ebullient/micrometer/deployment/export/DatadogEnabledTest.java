@@ -19,6 +19,7 @@ public class DatadogEnabledTest {
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
             .withConfigurationResource("test-logging.properties")
+            .overrideConfigKey("quarkus.micrometer.binder-enabled-default", "false")
             .overrideConfigKey("quarkus.micrometer.export.datadog.enabled", "true")
             .overrideConfigKey("quarkus.micrometer.export.datadog.publish", "false")
             .overrideConfigKey("quarkus.micrometer.export.datadog.apiKey", "dummy")
