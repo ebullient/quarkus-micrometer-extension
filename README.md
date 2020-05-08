@@ -15,8 +15,9 @@ SNAPSHOT releases use JitPack:
   </repositories>
 
   <properties>
-    <quarkus-micrometer-extension.version>1.0.0-SNAPSHOT</quarkus-micrometer-extension.version>
-    <micrometer.version>1.3.5</micrometer.version>
+    <!-- Experimental branch is built against the master branch of quarkus (999-SNAPSHOT) -->
+    <quarkus-micrometer-extension.version>999-SNAPSHOT</quarkus-micrometer-extension.version>
+    <micrometer.version>1.5.0</micrometer.version>
   </properties>
 
   <dependencies>

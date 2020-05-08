@@ -23,6 +23,7 @@ public class StackdriverEnabledTest {
             .overrideConfigKey("quarkus.micrometer.export.stackdriver.publish", "false")
             .overrideConfigKey("quarkus.micrometer.export.stackdriver.project-id", "myproject")
             .overrideConfigKey("quarkus.micrometer.registry-enabled-default", "false")
+            .overrideConfigKey("quarkus.micrometer.binder-enabled-default", "false")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClass(StackdriverRegistryProcessor.REGISTRY_CLASS));
 
