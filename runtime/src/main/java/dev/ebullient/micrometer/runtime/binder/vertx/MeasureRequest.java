@@ -1,6 +1,6 @@
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
-import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinder.VertxHttpMetricsConfig;
+import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinder.VertxMetricsConfig;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import io.vertx.core.http.HttpMethod;
@@ -9,49 +9,49 @@ import io.vertx.core.http.HttpServerResponse;
 
 public class MeasureRequest {
 
-    final VertxHttpMetricsConfig httpMetricsConfig;
-    final Timer.Sample sample;
-    final HttpMethod method;
-    final String requestPath;
+    VertxMetricsConfig config;
+    Timer.Sample sample;
+    HttpMethod method;
+    String requestPath;
 
-    public MeasureRequest(VertxHttpMetricsConfig httpMetricsConfig, MeasureHttpSocket socketMetric) {
-        this(httpMetricsConfig, socketMetric, null);
+    public MeasureRequest(VertxMetricsConfig httpMetricsConfig, HttpServerRequest request) {
+        this(httpMetricsConfig, request.method(), request.uri());
     }
 
-    public MeasureRequest(VertxHttpMetricsConfig httpMetricsConfig, MeasureHttpSocket socketMetric, HttpServerRequest request) {
-        this.requestPath = request == null ? null : HttpMetricsTags.parseUriPath(httpMetricsConfig, request.uri());
-        this.httpMetricsConfig = httpMetricsConfig;
-        System.out.printf("new MeasureRequest %s %s %s\n", httpMetricsConfig, socketMetric, requestPath);
+    public MeasureRequest(VertxMetricsConfig config, HttpMethod method, String uri) {
+        this.config = config;
+        this.method = method;
+        this.requestPath = VertxMetricsTags.parseUriPath(config.getIgnorePatterns(), uri);
+        this.config.activeServerRequests.increment();
+    }
 
+    public MeasureRequest requestBegin() {
         if (this.requestPath != null) {
-            sample = Timer.start(httpMetricsConfig.getRegistry());
-            method = request.method();
-        } else {
-            sample = null;
-            method = null;
+            sample = Timer.start(config.registry);
         }
-    }
-
-    public void reset() {
-    }
-
-    public void responseBegin(HttpServerResponse response) {
-    }
-
-    public void responseEnd(HttpServerResponse response) {
-        if (requestPath != null) {
-            System.out.printf("ReponseEnd %s\n", this.requestPath);
-            Timer.Builder builder = Timer.builder("http.server.requests")
-                    .tags(Tags.of(HttpMetricsTags.method(method),
-                            HttpMetricsTags.uri(httpMetricsConfig, requestPath, response),
-                            HttpMetricsTags.status(response)));
-
-            sample.stop(httpMetricsConfig.getRegistry(), builder);
-        }
-    }
-
-    public MeasureRequest responsePushed(HttpMethod method, String uri, HttpServerResponse response) {
         return this;
     }
 
+    public void requestReset() {
+        config.serverResetCounter.tags(Tags.of(
+                VertxMetricsTags.uri(config.getMatchPatterns(), requestPath, null),
+                VertxMetricsTags.method(method)))
+                .register(config.registry)
+                .increment();
+    }
+
+    public void responseEnd(HttpServerResponse response) {
+        if (sample != null) {
+            sample.stop(config.registry,
+                    config.serverRequestsTimer.tags(Tags.of(
+                            VertxMetricsTags.uri(config.getMatchPatterns(), requestPath, response),
+                            VertxMetricsTags.method(method),
+                            VertxMetricsTags.status(response))));
+        }
+        this.config.activeServerRequests.decrement();
+    }
+
+    public MeasureRequest responsePushed(HttpServerResponse response) {
+        return this;
+    }
 }

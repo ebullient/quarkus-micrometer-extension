@@ -2,6 +2,7 @@ package dev.ebullient.micrometer.runtime.binder.vertx;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Assertions;
@@ -11,20 +12,19 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinder.VertxHttpMetricsConfig;
 import io.micrometer.core.instrument.Tag;
 import io.vertx.core.http.HttpServerResponse;
 
 /**
  * Test tag creation
  */
-public class HttpMetricsTagsTest {
+public class VertxMetricsTagsTest {
 
     @Mock
     HttpServerResponse response;
 
-    @Mock
-    VertxHttpMetricsConfig config;
+    final List<Pattern> NO_IGNORE_PATTERNS = Collections.emptyList();
+    final List<Pattern> NO_MATCH_PATTERNS = Collections.emptyList();
 
     @BeforeEach
     public void initMocks() {
@@ -33,51 +33,51 @@ public class HttpMetricsTagsTest {
 
     @Test
     public void testParsePathNoIgnorePatterns() {
-        Mockito.when(config.getIgnorePatterns()).thenReturn(Collections.emptyList());
-        Assertions.assertEquals("/", HttpMetricsTags.parseUriPath(config, "//"));
-        Assertions.assertEquals("/", HttpMetricsTags.parseUriPath(config, ""));
+        Assertions.assertEquals("/", VertxMetricsTags.parseUriPath(NO_IGNORE_PATTERNS, "//"));
+        Assertions.assertEquals("/", VertxMetricsTags.parseUriPath(NO_IGNORE_PATTERNS, ""));
         Assertions.assertEquals("/path/with/no/leading/slash",
-                HttpMetricsTags.parseUriPath(config, "path/with/no/leading/slash"));
+                VertxMetricsTags.parseUriPath(NO_IGNORE_PATTERNS, "path/with/no/leading/slash"));
         Assertions.assertEquals("/path/with/query/string",
-                HttpMetricsTags.parseUriPath(config, "/path/with/query/string?stuff"));
+                VertxMetricsTags.parseUriPath(NO_IGNORE_PATTERNS, "/path/with/query/string?stuff"));
     }
 
     @Test
     public void testParsePathWithIgnorePatterns() {
-        Mockito.when(config.getIgnorePatterns()).thenReturn(Arrays.asList(Pattern.compile("/ignore.*")));
-        Assertions.assertNull(HttpMetricsTags.parseUriPath(config, "ignore/me/with/no/leading/slash"));
-        Assertions.assertNull(HttpMetricsTags.parseUriPath(config, "/ignore/me/with/query/string?stuff"));
+        List<Pattern> ignorePatterns = Arrays.asList(Pattern.compile("/ignore.*"));
+
+        Assertions.assertNull(VertxMetricsTags.parseUriPath(ignorePatterns, "ignore/me/with/no/leading/slash"));
+        Assertions.assertNull(VertxMetricsTags.parseUriPath(ignorePatterns, "/ignore/me/with/query/string?stuff"));
     }
 
     @Test
     public void testStatus() {
         Mockito.when(response.getStatusCode()).thenReturn(200);
-        Assertions.assertEquals(Tag.of("status", "200"), HttpMetricsTags.status(response));
+        Assertions.assertEquals(Tag.of("status", "200"), VertxMetricsTags.status(response));
 
         Mockito.when(response.getStatusCode()).thenReturn(301);
-        Assertions.assertEquals(Tag.of("status", "301"), HttpMetricsTags.status(response));
+        Assertions.assertEquals(Tag.of("status", "301"), VertxMetricsTags.status(response));
 
         Mockito.when(response.getStatusCode()).thenReturn(304);
-        Assertions.assertEquals(Tag.of("status", "304"), HttpMetricsTags.status(response));
+        Assertions.assertEquals(Tag.of("status", "304"), VertxMetricsTags.status(response));
     }
 
     @Test
     public void testUriRedirect() {
         Mockito.when(response.getStatusCode()).thenReturn(301);
-        Assertions.assertEquals(HttpMetricsTags.URI_REDIRECTION, HttpMetricsTags.uri(config, "/moved", response));
+        Assertions.assertEquals(VertxMetricsTags.URI_REDIRECTION, VertxMetricsTags.uri(NO_MATCH_PATTERNS, "/moved", response));
 
         Mockito.when(response.getStatusCode()).thenReturn(302);
-        Assertions.assertEquals(HttpMetricsTags.URI_REDIRECTION, HttpMetricsTags.uri(config, "/moved", response));
+        Assertions.assertEquals(VertxMetricsTags.URI_REDIRECTION, VertxMetricsTags.uri(NO_MATCH_PATTERNS, "/moved", response));
 
         Mockito.when(response.getStatusCode()).thenReturn(304);
-        Assertions.assertEquals(HttpMetricsTags.URI_REDIRECTION, HttpMetricsTags.uri(config, "/moved", response));
+        Assertions.assertEquals(VertxMetricsTags.URI_REDIRECTION, VertxMetricsTags.uri(NO_MATCH_PATTERNS, "/moved", response));
     }
 
     @Test
     public void testUriNotFound() {
         Mockito.when(response.getStatusCode()).thenReturn(404);
-        Assertions.assertEquals(HttpMetricsTags.URI_NOT_FOUND, HttpMetricsTags.uri(config, "/invalid", response));
-        Assertions.assertEquals(Tag.of("status", "404"), HttpMetricsTags.status(response));
+        Assertions.assertEquals(VertxMetricsTags.URI_NOT_FOUND, VertxMetricsTags.uri(NO_MATCH_PATTERNS, "/invalid", response));
+        Assertions.assertEquals(Tag.of("status", "404"), VertxMetricsTags.status(response));
     }
 
     //    @Test
