@@ -1,44 +1,44 @@
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
-import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinder.VertxMetricsConfig;
+import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderAdapter.MetricsBinder;
 import io.vertx.core.net.SocketAddress;
 
 public class MeasureHttpSocket {
 
-    VertxMetricsConfig config;
+    MetricsBinder binder;
 
-    public MeasureHttpSocket(VertxMetricsConfig config) {
-        this.config = config;
+    public MeasureHttpSocket(MetricsBinder binder) {
+        this.binder = binder;
     }
 
     public MeasureHttpSocket connected(SocketAddress remoteAddress, String remoteName) {
-        this.config.activeHttpConnections.increment();
+        this.binder.activeHttpConnections.increment();
         return this;
     }
 
     public MeasureHttpSocket disconnected(SocketAddress remoteAddress) {
-        this.config.activeHttpConnections.decrement();
+        this.binder.activeHttpConnections.decrement();
         return this;
     }
 
     public MeasureHttpSocket bytesRead(SocketAddress remoteAddress, long numberOfBytes) {
-        this.config.httpBytesRead
+        this.binder.httpBytesRead
                 // tags
-                .register(config.registry)
+                .register(binder.registry)
                 .record(numberOfBytes);
         return this;
     }
 
     public MeasureHttpSocket bytesWritten(SocketAddress remoteAddress, long numberOfBytes) {
-        this.config.httpBytesWritten
+        this.binder.httpBytesWritten
                 // tags
-                .register(config.registry)
+                .register(binder.registry)
                 .record(numberOfBytes);
         return this;
     }
 
     public MeasureHttpSocket exceptionOccurred(String remote, SocketAddress remoteAddress, Throwable t) {
-        this.config.incrementErrorCount(t.getClass().getName());
+        this.binder.incrementErrorCount(t.getClass().getName());
         return this;
     }
 }

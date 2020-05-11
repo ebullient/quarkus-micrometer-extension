@@ -9,7 +9,7 @@ import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.deployment.MicrometerBuildTimeConfig;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
-import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinder;
+import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderAdapter;
 import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderRecorder;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -59,7 +59,7 @@ public class VertxBinderProcessor {
 
         // Add the Prometheus Registry Producer
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
-                .addBeanClass(VertxMeterBinder.class)
+                .addBeanClass(VertxMeterBinderAdapter.class)
                 .setUnremovable().build());
 
     }
