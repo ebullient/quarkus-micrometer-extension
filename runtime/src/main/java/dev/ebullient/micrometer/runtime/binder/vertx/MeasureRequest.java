@@ -33,9 +33,11 @@ public class MeasureRequest {
 
     public MeasureRequest responsePushed(HttpServerResponse response) {
         if (this.requestPath != null) {
+            
             binder.registry.counter("http.server.push", Tags.of(
                     VertxMetricsTags.uri(binder.getMatchPatterns(), requestPath, response),
                     VertxMetricsTags.method(method),
+                    VertxMetricsTags.outcome(response),
                     VertxMetricsTags.status(response)))
                     .increment();
         }
@@ -47,6 +49,7 @@ public class MeasureRequest {
             sample.stop(binder.registry.timer("http.server.requests", Tags.of(
                     VertxMetricsTags.uri(binder.getMatchPatterns(), requestPath, null),
                     VertxMetricsTags.method(method),
+                    VertxMetricsTags.OUTCOME_CLIENT_ERROR,
                     VertxMetricsTags.STATUS_RESET)));
         }
     }
@@ -56,6 +59,7 @@ public class MeasureRequest {
             sample.stop(binder.registry.timer("http.server.requests", Tags.of(
                     VertxMetricsTags.uri(binder.getMatchPatterns(), requestPath, response),
                     VertxMetricsTags.method(method),
+                    VertxMetricsTags.outcome(response),
                     VertxMetricsTags.status(response))));
         }
     }
