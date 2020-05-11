@@ -22,36 +22,38 @@ public class MeasureRequest {
         this.config = config;
         this.method = method;
         this.requestPath = VertxMetricsTags.parseUriPath(config.getIgnorePatterns(), uri);
-        this.config.activeServerRequests.increment();
     }
 
     public MeasureRequest requestBegin() {
+        this.config.activeHttpServerRequests.increment();
         if (this.requestPath != null) {
             sample = Timer.start(config.registry);
         }
         return this;
     }
 
+    public MeasureRequest responsePushed(HttpServerResponse response) {
+        this.config.activeHttpServerRequests.increment();
+        return this;
+    }
+
     public void requestReset() {
-        config.serverResetCounter.tags(Tags.of(
+        config.httpServerRequestReset.tags(Tags.of(
                 VertxMetricsTags.uri(config.getMatchPatterns(), requestPath, null),
                 VertxMetricsTags.method(method)))
                 .register(config.registry)
                 .increment();
+        this.config.activeHttpServerRequests.decrement();
     }
 
     public void responseEnd(HttpServerResponse response) {
         if (sample != null) {
             sample.stop(config.registry,
-                    config.serverRequestsTimer.tags(Tags.of(
+                    config.httpServerRequestsTimer.tags(Tags.of(
                             VertxMetricsTags.uri(config.getMatchPatterns(), requestPath, response),
                             VertxMetricsTags.method(method),
                             VertxMetricsTags.status(response))));
         }
-        this.config.activeServerRequests.decrement();
-    }
-
-    public MeasureRequest responsePushed(HttpServerResponse response) {
-        return this;
+        this.config.activeHttpServerRequests.decrement();
     }
 }
