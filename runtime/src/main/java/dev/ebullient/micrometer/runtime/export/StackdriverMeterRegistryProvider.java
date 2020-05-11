@@ -6,7 +6,6 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.Config;
-import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
@@ -16,8 +15,6 @@ import io.quarkus.arc.DefaultBean;
 
 @Singleton
 public class StackdriverMeterRegistryProvider {
-    private static final Logger log = Logger.getLogger(StackdriverMeterRegistryProvider.class);
-
     static final String PREFIX = "quarkus.micrometer.export.stackdriver.";
     static final String PUBLISH = "stackdriver.publish";
     static final String ENABLED = "stackdriver.enabled";

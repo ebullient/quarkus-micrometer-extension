@@ -6,7 +6,6 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.Config;
-import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
@@ -16,7 +15,6 @@ import io.quarkus.arc.DefaultBean;
 
 @Singleton
 public class DatadogMeterRegistryProvider {
-    private static final Logger log = Logger.getLogger(DatadogMeterRegistryProvider.class);
     static final String PREFIX = "quarkus.micrometer.export.datadog.";
     static final String PUBLISH = "datadog.publish";
     static final String ENABLED = "datadog.enabled";

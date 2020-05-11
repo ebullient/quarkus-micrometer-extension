@@ -5,8 +5,6 @@ import java.util.function.BooleanSupplier;
 
 import javax.interceptor.Interceptor;
 
-import org.jboss.logging.Logger;
-
 import dev.ebullient.micrometer.deployment.MicrometerBuildTimeConfig;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderAdapter;
@@ -23,7 +21,6 @@ import io.quarkus.runtime.annotations.ConfigRoot;
 import io.quarkus.vertx.core.deployment.VertxOptionsConsumerBuildItem;
 
 public class VertxBinderProcessor {
-    private static final Logger log = Logger.getLogger(VertxBinderProcessor.class);
 
     static final String METRIC_OPTIONS_CLASS_NAME = "io.vertx.core.metrics.MetricsOptions";
     static final Class<?> METRIC_OPTIONS_CLASS = MicrometerRecorder.getClassForName(METRIC_OPTIONS_CLASS_NAME);

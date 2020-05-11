@@ -3,8 +3,6 @@ package dev.ebullient.micrometer.deployment.export;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
-import org.jboss.logging.Logger;
-
 import dev.ebullient.micrometer.deployment.MicrometerBuildTimeConfig;
 import dev.ebullient.micrometer.deployment.MicrometerRegistryProviderBuildItem;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
@@ -23,8 +21,6 @@ import io.quarkus.runtime.annotations.ConfigRoot;
  * references.
  */
 public class DatadogRegistryProcessor {
-    private static final Logger log = Logger.getLogger(DatadogRegistryProcessor.class);
-
     static final String REGISTRY_CLASS_NAME = "io.micrometer.datadog.DatadogMeterRegistry";
     static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
