@@ -9,10 +9,10 @@ import io.vertx.core.http.HttpServerResponse;
 
 public class MeasureRequest {
 
-    MetricsBinder binder;
+    final MetricsBinder binder;
     Timer.Sample sample;
-    HttpMethod method;
-    String requestPath;
+    final HttpMethod method;
+    final String requestPath;
 
     public MeasureRequest(MetricsBinder binder, HttpServerRequest request) {
         this(binder, request.method(), request.uri());
@@ -25,7 +25,6 @@ public class MeasureRequest {
     }
 
     public MeasureRequest requestBegin() {
-        this.binder.activeHttpServerRequests.increment();
         if (this.requestPath != null) {
             sample = Timer.start(binder.registry);
         }
@@ -33,27 +32,31 @@ public class MeasureRequest {
     }
 
     public MeasureRequest responsePushed(HttpServerResponse response) {
-        this.binder.activeHttpServerRequests.increment();
+        if (this.requestPath != null) {
+            binder.registry.counter("http.server.push", Tags.of(
+                    VertxMetricsTags.uri(binder.getMatchPatterns(), requestPath, response),
+                    VertxMetricsTags.method(method),
+                    VertxMetricsTags.status(response)))
+                    .increment();
+        }
         return this;
     }
 
     public void requestReset() {
-        binder.httpServerRequestReset.tags(Tags.of(
-                VertxMetricsTags.uri(binder.getMatchPatterns(), requestPath, null),
-                VertxMetricsTags.method(method)))
-                .register(binder.registry)
-                .increment();
-        this.binder.activeHttpServerRequests.decrement();
+        if (sample != null) {
+            sample.stop(binder.registry.timer("http.server.requests", Tags.of(
+                    VertxMetricsTags.uri(binder.getMatchPatterns(), requestPath, null),
+                    VertxMetricsTags.method(method),
+                    VertxMetricsTags.STATUS_RESET)));
+        }
     }
 
     public void responseEnd(HttpServerResponse response) {
         if (sample != null) {
-            sample.stop(binder.registry,
-                    binder.httpServerRequestsTimer.tags(Tags.of(
-                            VertxMetricsTags.uri(binder.getMatchPatterns(), requestPath, response),
-                            VertxMetricsTags.method(method),
-                            VertxMetricsTags.status(response))));
+            sample.stop(binder.registry.timer("http.server.requests", Tags.of(
+                    VertxMetricsTags.uri(binder.getMatchPatterns(), requestPath, response),
+                    VertxMetricsTags.method(method),
+                    VertxMetricsTags.status(response))));
         }
-        this.binder.activeHttpServerRequests.decrement();
     }
 }

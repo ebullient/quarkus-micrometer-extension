@@ -42,7 +42,7 @@ public class MicrometerRecorder {
             log.debugf("Configuring %s instances. hasFilters=%s", typeClass, !classFilters.isUnsatisfied());
             if (!classFilters.isUnsatisfied() && !typedRegistries.isUnsatisfied()) {
                 typedRegistries.forEach(registry -> {
-                    classFilters.forEach(registry.config()::meterFilter);
+                    classFilters.forEach(x -> registry.config().meterFilter(x));
                 });
             }
         });
@@ -52,7 +52,7 @@ public class MicrometerRecorder {
         log.debugf("Configuring all registries. hasFilters=%s", !filters.isUnsatisfied());
         if (!filters.isUnsatisfied()) {
             allRegistries.forEach(registry -> {
-                filters.forEach(registry.config()::meterFilter);
+                filters.forEach(x -> registry.config().meterFilter(x));
             });
         }
 
