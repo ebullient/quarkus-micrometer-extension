@@ -14,16 +14,19 @@ public class VertxMetricsTags {
     private static final Logger log = Logger.getLogger(VertxMetricsTags.class);
 
     static final Tag URI_NOT_FOUND = Tag.of("uri", "NOT_FOUND");
-
     static final Tag URI_REDIRECTION = Tag.of("uri", "REDIRECTION");
-
     static final Tag URI_ROOT = Tag.of("uri", "root");
-
     static final Tag URI_UNKNOWN = Tag.of("uri", "UNKNOWN");
 
     static final Tag STATUS_UNKNOWN = Tag.of("status", "UNKNOWN");
-
     static final Tag STATUS_RESET = Tag.of("status", "RESET");
+
+    static final Tag OUTCOME_INFORMATIONAL = Tag.of("outcome", "INFORMATIONAL");
+    static final Tag OUTCOME_SUCCESS = Tag.of("outcome", "SUCCESS");
+    static final Tag OUTCOME_REDIRECTION = Tag.of("outcome", "REDIRECTION");
+    static final Tag OUTCOME_CLIENT_ERROR = Tag.of("outcome", "CLIENT_ERROR");
+    static final Tag OUTCOME_SERVER_ERROR = Tag.of("outcome", "SERVER_ERROR");
+    static final Tag OUTCOME_UNKNOWN = Tag.of("outcome", "UNKNOWN");
 
     static final Tag METHOD_UNKNOWN = Tag.of("method", "UNKNOWN");
 
@@ -50,6 +53,31 @@ public class VertxMetricsTags {
      */
     public static Tag status(HttpServerResponse response) {
         return (response != null) ? Tag.of("status", Integer.toString(response.getStatusCode())) : STATUS_UNKNOWN;
+    }
+
+    /**
+     * Creates an {@code outcome} {@code Tag} derived from the given {@code response}.
+     * 
+     * @param response the response
+     * @return the outcome tag
+     */
+    public static Tag outcome(HttpServerResponse response) {
+        if (response != null) {
+            int codeFamily = response.getStatusCode() / 100;
+            switch (codeFamily) {
+                case 1:
+                    return OUTCOME_INFORMATIONAL;
+                case 2:
+                    return OUTCOME_SUCCESS;
+                case 3:
+                    return OUTCOME_REDIRECTION;
+                case 4:
+                    return OUTCOME_CLIENT_ERROR;
+                case 5:
+                    return OUTCOME_SERVER_ERROR;
+            }
+        }
+        return OUTCOME_UNKNOWN;
     }
 
     /**
