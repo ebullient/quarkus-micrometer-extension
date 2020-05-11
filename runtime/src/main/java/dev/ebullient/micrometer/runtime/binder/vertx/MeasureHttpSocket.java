@@ -7,18 +7,38 @@ public class MeasureHttpSocket {
 
     VertxMetricsConfig config;
 
-    public MeasureHttpSocket(VertxMetricsConfig config, SocketAddress remoteAddress, String remoteName) {
+    public MeasureHttpSocket(VertxMetricsConfig config) {
         this.config = config;
-        System.out.printf("new MeasureHttpSocket %s %s %s\n", config, remoteAddress, remoteName);
     }
 
-    public void disconnected(SocketAddress remoteAddress) {
+    public MeasureHttpSocket connected(SocketAddress remoteAddress, String remoteName) {
+        this.config.activeHttpConnections.increment();
+        return this;
     }
 
-    public void bytesRead(SocketAddress remoteAddress, long numberOfBytes) {
+    public MeasureHttpSocket disconnected(SocketAddress remoteAddress) {
+        this.config.activeHttpConnections.decrement();
+        return this;
     }
 
-    public void bytesWritten(SocketAddress remoteAddress, long numberOfBytes) {
+    public MeasureHttpSocket bytesRead(SocketAddress remoteAddress, long numberOfBytes) {
+        this.config.httpBytesRead
+                // tags
+                .register(config.registry)
+                .record(numberOfBytes);
+        return this;
     }
 
+    public MeasureHttpSocket bytesWritten(SocketAddress remoteAddress, long numberOfBytes) {
+        this.config.httpBytesWritten
+                // tags
+                .register(config.registry)
+                .record(numberOfBytes);
+        return this;
+    }
+
+    public MeasureHttpSocket exceptionOccurred(String remote, SocketAddress remoteAddress, Throwable t) {
+        this.config.incrementErrorCount(t.getClass().getName());
+        return this;
+    }
 }

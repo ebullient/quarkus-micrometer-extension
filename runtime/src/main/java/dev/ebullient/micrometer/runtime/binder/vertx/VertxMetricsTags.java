@@ -70,10 +70,23 @@ public class VertxMetricsTags {
                 return URI_NOT_FOUND;
             }
         }
-        if (pathInfo.isEmpty()) {
+        if (pathInfo == null) {
+            return URI_UNKNOWN;
+        }
+
+        if (pathInfo.isEmpty() || "/".equals(pathInfo)) {
             return URI_ROOT;
         }
-        return URI_UNKNOWN;
+
+        // TODO: matched/filtered URIs
+
+        // Use first segment of request path
+        int pos = pathInfo.indexOf('/', 1);
+        if (pos > 0) {
+            return Tag.of("uri", pathInfo.substring(0, pos));
+        } else {
+            return Tag.of("uri", pathInfo);
+        }
     }
 
     /**

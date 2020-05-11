@@ -1,8 +1,6 @@
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Pattern;
@@ -11,8 +9,7 @@ import javax.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.*;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.vertx.core.VertxOptions;
@@ -82,16 +79,34 @@ public class VertxMeterBinder extends MetricsOptions implements MeterBinder, Ver
     static class VertxMetricsConfig {
         final MeterRegistry registry;
         final VertxMeterBinder meterBinder;
-        final Counter.Builder serverResetCounter;
-        final Timer.Builder serverRequestsTimer;
-        final LongAdder activeServerRequests;
+
+        final LongAdder activeHttpServerRequests;
+        final LongAdder activeServerWebsocketConnections;
+        final LongAdder activeHttpConnections;
+        final Map<String, Counter> httpErrorCount;
+
+        final Counter.Builder httpServerRequestReset;
+        final Timer.Builder httpServerRequestsTimer;
+        final DistributionSummary.Builder httpBytesRead;
+        final DistributionSummary.Builder httpBytesWritten;
 
         VertxMetricsConfig(MeterRegistry registry, VertxMeterBinder meterBinder) {
             this.registry = registry;
             this.meterBinder = meterBinder;
-            this.serverResetCounter = Counter.builder("http.server.request.reset");
-            this.serverRequestsTimer = Timer.builder("http.server.requests");
-            this.activeServerRequests = registry.gauge("http.server.requests.active", new LongAdder());
+            this.httpServerRequestReset = Counter.builder("http.server.request.reset");
+            this.httpServerRequestsTimer = Timer.builder("http.server.requests");
+            this.httpBytesRead = DistributionSummary.builder("http.server.bytes.read");
+            this.httpBytesWritten = DistributionSummary.builder("http.server.bytes.written");
+
+            this.activeHttpServerRequests = registry.gauge("http.server.requests.active", new LongAdder());
+            this.activeServerWebsocketConnections = registry.gauge("http.server.websockets.active", new LongAdder());
+            this.activeHttpConnections = registry.gauge("http.server.connections", new LongAdder());
+            this.httpErrorCount = new HashMap<String, Counter>();
+        }
+
+        void incrementErrorCount(String exceptionName) {
+            httpErrorCount.computeIfAbsent(exceptionName, k -> Counter.builder(k).tag("class", k).register(registry))
+                    .increment();
         }
 
         List<Pattern> getIgnorePatterns() {

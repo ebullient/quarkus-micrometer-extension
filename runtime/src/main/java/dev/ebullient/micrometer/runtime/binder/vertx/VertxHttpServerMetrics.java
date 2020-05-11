@@ -22,7 +22,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.core.spi.metrics.HttpServerMetrics;
 
 public class VertxHttpServerMetrics
-        implements HttpServerMetrics<MeasureRequest, MeasureWebSocket, MeasureHttpSocket> {
+        implements HttpServerMetrics<MeasureRequest, String, MeasureHttpSocket> {
 
     final VertxMetricsConfig config;
 
@@ -33,7 +33,8 @@ public class VertxHttpServerMetrics
     /** -> MeasureHttpSocket */
     @Override
     public MeasureHttpSocket connected(SocketAddress remoteAddress, String remoteName) {
-        return new MeasureHttpSocket(config, remoteAddress, remoteName);
+        return new MeasureHttpSocket(config)
+                .connected(remoteAddress, remoteName);
     }
 
     /** MeasureHttpSocket */
@@ -60,6 +61,13 @@ public class VertxHttpServerMetrics
         return new MeasureRequest(config, request).requestBegin();
     }
 
+    /** MeasureHttpSocket -> MeasureRequest */
+    @Override
+    public MeasureRequest responsePushed(MeasureHttpSocket socketMetric, HttpMethod method, String uri,
+            HttpServerResponse response) {
+        return new MeasureRequest(config, method, uri).responsePushed(response);
+    }
+
     /** MeasureRequest */
     @Override
     public void requestReset(MeasureRequest requestMetric) {
@@ -72,23 +80,17 @@ public class VertxHttpServerMetrics
         requestMetric.responseEnd(response);
     }
 
-    /** MeasureHttpSocket -> MeasureRequest */
-    @Override
-    public MeasureRequest responsePushed(MeasureHttpSocket socketMetric, HttpMethod method, String uri,
-            HttpServerResponse response) {
-        return new MeasureRequest(config, method, uri).responsePushed(response);
-    }
-
     /** MeasureHttpSocket & MeasureRequest -> MeasureWebSocket */
     @Override
-    public MeasureWebSocket connected(MeasureHttpSocket socketMetric, MeasureRequest requestMetric,
+    public String connected(MeasureHttpSocket socketMetric, MeasureRequest requestMetric,
             ServerWebSocket serverWebSocket) {
-        return new MeasureWebSocket(config, requestMetric, serverWebSocket);
+        config.activeServerWebsocketConnections.increment();
+        return requestMetric.requestPath;
     }
 
     /** MeasureWebSocket */
     @Override
-    public void disconnected(MeasureWebSocket serverWebSocketMetric) {
-        serverWebSocketMetric.disconnected();
+    public void disconnected(String requestPath) {
+        config.activeServerWebsocketConnections.decrement();
     }
 }
