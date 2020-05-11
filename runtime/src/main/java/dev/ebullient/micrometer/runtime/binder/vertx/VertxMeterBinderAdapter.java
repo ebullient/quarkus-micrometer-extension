@@ -21,14 +21,14 @@ import io.vertx.core.spi.metrics.HttpServerMetrics;
 import io.vertx.core.spi.metrics.VertxMetrics;
 
 @Singleton
-public class VertxMeterBinder extends MetricsOptions implements MeterBinder, VertxMetricsFactory, VertxMetrics {
-    private static final Logger log = Logger.getLogger(VertxMeterBinder.class);
+public class VertxMeterBinderAdapter extends MetricsOptions implements MeterBinder, VertxMetricsFactory, VertxMetrics {
+    private static final Logger log = Logger.getLogger(VertxMeterBinderAdapter.class);
 
-    AtomicReference<VertxMetricsConfig> vertxMetricsConfig = new AtomicReference<>();
+    AtomicReference<MetricsBinder> vertxMetricsConfig = new AtomicReference<>();
 
     final List<Pattern> ignorePatterns;
 
-    public VertxMeterBinder(VertxBinderConfig config) {
+    public VertxMeterBinderAdapter(VertxBinderConfig config) {
         if (config.ignorePatterns.isPresent()) {
             List<String> stringPatterns = config.ignorePatterns.get();
             ignorePatterns = new ArrayList<>(stringPatterns.size());
@@ -43,7 +43,7 @@ public class VertxMeterBinder extends MetricsOptions implements MeterBinder, Ver
     @Override
     public void bindTo(MeterRegistry registry) {
         log.debugf("Bind registry %s to Vertx Metrics", registry);
-        vertxMetricsConfig.set(new VertxMetricsConfig(registry, this));
+        vertxMetricsConfig.set(new MetricsBinder(registry, this));
     }
 
     @Override
@@ -69,16 +69,16 @@ public class VertxMeterBinder extends MetricsOptions implements MeterBinder, Ver
     @Override
     public HttpServerMetrics<?, ?, ?> createHttpServerMetrics(HttpServerOptions options, SocketAddress localAddress) {
         log.debugf("Create HttpServerMetrics with options %s and address %s", options, localAddress);
-        VertxMetricsConfig metricsConfig = vertxMetricsConfig.get();
-        if (metricsConfig == null) {
+        MetricsBinder binder = vertxMetricsConfig.get();
+        if (binder == null) {
             throw new IllegalStateException("MeterRegistry was not resolved");
         }
-        return new VertxHttpServerMetrics(metricsConfig);
+        return new VertxHttpServerMetrics(binder);
     }
 
-    static class VertxMetricsConfig {
+    static class MetricsBinder {
         final MeterRegistry registry;
-        final VertxMeterBinder meterBinder;
+        final VertxMeterBinderAdapter meterBinder;
 
         final LongAdder activeHttpServerRequests;
         final LongAdder activeServerWebsocketConnections;
@@ -90,7 +90,7 @@ public class VertxMeterBinder extends MetricsOptions implements MeterBinder, Ver
         final DistributionSummary.Builder httpBytesRead;
         final DistributionSummary.Builder httpBytesWritten;
 
-        VertxMetricsConfig(MeterRegistry registry, VertxMeterBinder meterBinder) {
+        MetricsBinder(MeterRegistry registry, VertxMeterBinderAdapter meterBinder) {
             this.registry = registry;
             this.meterBinder = meterBinder;
             this.httpServerRequestReset = Counter.builder("http.server.request.reset");
@@ -101,6 +101,7 @@ public class VertxMeterBinder extends MetricsOptions implements MeterBinder, Ver
             this.activeHttpServerRequests = registry.gauge("http.server.requests.active", new LongAdder());
             this.activeServerWebsocketConnections = registry.gauge("http.server.websockets.active", new LongAdder());
             this.activeHttpConnections = registry.gauge("http.server.connections", new LongAdder());
+
             this.httpErrorCount = new HashMap<String, Counter>();
         }
 

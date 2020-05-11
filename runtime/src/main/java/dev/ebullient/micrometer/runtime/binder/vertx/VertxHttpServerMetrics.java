@@ -13,7 +13,7 @@
  */
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
-import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinder.VertxMetricsConfig;
+import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderAdapter.MetricsBinder;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -24,16 +24,16 @@ import io.vertx.core.spi.metrics.HttpServerMetrics;
 public class VertxHttpServerMetrics
         implements HttpServerMetrics<MeasureRequest, String, MeasureHttpSocket> {
 
-    final VertxMetricsConfig config;
+    final MetricsBinder binder;
 
-    public VertxHttpServerMetrics(VertxMetricsConfig config) {
-        this.config = config;
+    public VertxHttpServerMetrics(MetricsBinder binder) {
+        this.binder = binder;
     }
 
     /** -> MeasureHttpSocket */
     @Override
     public MeasureHttpSocket connected(SocketAddress remoteAddress, String remoteName) {
-        return new MeasureHttpSocket(config)
+        return new MeasureHttpSocket(binder)
                 .connected(remoteAddress, remoteName);
     }
 
@@ -58,14 +58,14 @@ public class VertxHttpServerMetrics
     /** MeasureHttpSocket -> MeasureRequest */
     @Override
     public MeasureRequest requestBegin(MeasureHttpSocket socketMetric, HttpServerRequest request) {
-        return new MeasureRequest(config, request).requestBegin();
+        return new MeasureRequest(binder, request).requestBegin();
     }
 
     /** MeasureHttpSocket -> MeasureRequest */
     @Override
     public MeasureRequest responsePushed(MeasureHttpSocket socketMetric, HttpMethod method, String uri,
             HttpServerResponse response) {
-        return new MeasureRequest(config, method, uri).responsePushed(response);
+        return new MeasureRequest(binder, method, uri).responsePushed(response);
     }
 
     /** MeasureRequest */
@@ -84,13 +84,13 @@ public class VertxHttpServerMetrics
     @Override
     public String connected(MeasureHttpSocket socketMetric, MeasureRequest requestMetric,
             ServerWebSocket serverWebSocket) {
-        config.activeServerWebsocketConnections.increment();
+        binder.activeServerWebsocketConnections.increment();
         return requestMetric.requestPath;
     }
 
     /** MeasureWebSocket */
     @Override
     public void disconnected(String requestPath) {
-        config.activeServerWebsocketConnections.decrement();
+        binder.activeServerWebsocketConnections.decrement();
     }
 }

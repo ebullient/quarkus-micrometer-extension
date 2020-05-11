@@ -18,7 +18,7 @@ public class VertxMeterBinderRecorder {
             @Override
             public void accept(VertxOptions vertxOptions) {
                 log.debug("Adding Micrometer MeterBinder to VertxOptions");
-                VertxMeterBinder binder = CDI.current().select(VertxMeterBinder.class).get();
+                VertxMeterBinderAdapter binder = CDI.current().select(VertxMeterBinderAdapter.class).get();
                 vertxOptions.setMetricsOptions(binder);
             }
         };
