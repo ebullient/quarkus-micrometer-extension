@@ -13,7 +13,7 @@
  */
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
-import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinder.VertxHttpMetricsConfig;
+import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinder.VertxMetricsConfig;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -24,16 +24,16 @@ import io.vertx.core.spi.metrics.HttpServerMetrics;
 public class VertxHttpServerMetrics
         implements HttpServerMetrics<MeasureRequest, MeasureWebSocket, MeasureHttpSocket> {
 
-    final VertxHttpMetricsConfig httpMetricsConfig;
+    final VertxMetricsConfig config;
 
-    public VertxHttpServerMetrics(VertxHttpMetricsConfig httpMetricsConfig) {
-        this.httpMetricsConfig = httpMetricsConfig;
+    public VertxHttpServerMetrics(VertxMetricsConfig config) {
+        this.config = config;
     }
 
     /** -> MeasureHttpSocket */
     @Override
     public MeasureHttpSocket connected(SocketAddress remoteAddress, String remoteName) {
-        return new MeasureHttpSocket(httpMetricsConfig, remoteAddress, remoteName);
+        return new MeasureHttpSocket(config, remoteAddress, remoteName);
     }
 
     /** MeasureHttpSocket */
@@ -57,19 +57,13 @@ public class VertxHttpServerMetrics
     /** MeasureHttpSocket -> MeasureRequest */
     @Override
     public MeasureRequest requestBegin(MeasureHttpSocket socketMetric, HttpServerRequest request) {
-        return new MeasureRequest(httpMetricsConfig, socketMetric, request);
+        return new MeasureRequest(config, request).requestBegin();
     }
 
     /** MeasureRequest */
     @Override
     public void requestReset(MeasureRequest requestMetric) {
-        requestMetric.reset();
-    }
-
-    /** MeasureRequest */
-    @Override
-    public void responseBegin(MeasureRequest requestMetric, HttpServerResponse response) {
-        requestMetric.responseBegin(response);
+        requestMetric.requestReset();
     }
 
     /** MeasureRequest */
@@ -82,14 +76,14 @@ public class VertxHttpServerMetrics
     @Override
     public MeasureRequest responsePushed(MeasureHttpSocket socketMetric, HttpMethod method, String uri,
             HttpServerResponse response) {
-        return new MeasureRequest(httpMetricsConfig, socketMetric).responsePushed(method, uri, response);
+        return new MeasureRequest(config, method, uri).responsePushed(response);
     }
 
     /** MeasureHttpSocket & MeasureRequest -> MeasureWebSocket */
     @Override
     public MeasureWebSocket connected(MeasureHttpSocket socketMetric, MeasureRequest requestMetric,
             ServerWebSocket serverWebSocket) {
-        return new MeasureWebSocket(httpMetricsConfig, requestMetric, serverWebSocket);
+        return new MeasureWebSocket(config, requestMetric, serverWebSocket);
     }
 
     /** MeasureWebSocket */

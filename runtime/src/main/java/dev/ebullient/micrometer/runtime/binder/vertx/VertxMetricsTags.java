@@ -1,17 +1,17 @@
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinder.VertxHttpMetricsConfig;
 import io.micrometer.core.instrument.Tag;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 
-public class HttpMetricsTags {
-    private static final Logger log = Logger.getLogger(HttpMetricsTags.class);
+public class VertxMetricsTags {
+    private static final Logger log = Logger.getLogger(VertxMetricsTags.class);
 
     static final Tag URI_NOT_FOUND = Tag.of("uri", "NOT_FOUND");
 
@@ -57,11 +57,11 @@ public class HttpMetricsTags {
      * for all other requests.
      *
      *
-     * @param httpMetricsConfig
+     * @param matchPattern
      * @param response the response
      * @return the uri tag derived from the request
      */
-    public static Tag uri(VertxHttpMetricsConfig httpMetricsConfig, String pathInfo, HttpServerResponse response) {
+    public static Tag uri(List<Pattern> matchPattern, String pathInfo, HttpServerResponse response) {
         if (response != null) {
             int code = response.getStatusCode();
             if (code / 100 == 3) {
@@ -80,7 +80,11 @@ public class HttpMetricsTags {
      * Extract the path out of the uri. Return null if the path should be
      * ignored.
      */
-    static String parseUriPath(VertxHttpMetricsConfig httpMetricsConfig, String uri) {
+    static String parseUriPath(List<Pattern> ignorePatterns, String uri) {
+        if (uri == null) {
+            return null;
+        }
+
         String path = "/" + extractPath(uri);
         path = MULTIPLE_SLASH_PATTERN.matcher(path).replaceAll("/");
         path = TRAILING_SLASH_PATTERN.matcher(path).replaceAll("");
@@ -89,10 +93,8 @@ public class HttpMetricsTags {
             path = "/";
         }
 
-        System.out.println("path=" + path);
-
         // Compare path against "ignore this path" patterns
-        for (Pattern p : httpMetricsConfig.getIgnorePatterns()) {
+        for (Pattern p : ignorePatterns) {
             System.out.println("pattern=" + p.pattern());
             if (p.matcher(path).matches()) {
                 log.debugf("Path %s ignored; matches pattern %s", uri, p.pattern());
@@ -102,7 +104,10 @@ public class HttpMetricsTags {
         return path;
     }
 
-    static String extractPath(String uri) {
+    private static String extractPath(String uri) {
+        if (uri.isEmpty()) {
+            return uri;
+        }
         int i;
         if (uri.charAt(0) == '/') {
             i = 0;
