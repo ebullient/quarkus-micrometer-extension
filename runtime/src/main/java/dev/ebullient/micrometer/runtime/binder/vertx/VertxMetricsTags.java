@@ -23,6 +23,8 @@ public class VertxMetricsTags {
 
     static final Tag STATUS_UNKNOWN = Tag.of("status", "UNKNOWN");
 
+    static final Tag STATUS_RESET = Tag.of("status", "RESET");
+
     static final Tag METHOD_UNKNOWN = Tag.of("method", "UNKNOWN");
 
     private static final Pattern TRAILING_SLASH_PATTERN = Pattern.compile("/$");
@@ -73,7 +75,6 @@ public class VertxMetricsTags {
         if (pathInfo == null) {
             return URI_UNKNOWN;
         }
-
         if (pathInfo.isEmpty() || "/".equals(pathInfo)) {
             return URI_ROOT;
         }

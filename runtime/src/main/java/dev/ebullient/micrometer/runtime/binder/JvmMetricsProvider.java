@@ -6,6 +6,7 @@ import javax.inject.Singleton;
 
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmHeapPressureMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
 
@@ -38,5 +39,12 @@ public class JvmMetricsProvider {
     @Default
     public ClassLoaderMetrics classLoaderMetrics() {
         return new ClassLoaderMetrics();
+    }
+
+    @Produces
+    @Singleton
+    @Default
+    public JvmHeapPressureMetrics heapPressureMetrics() {
+        return new JvmHeapPressureMetrics();
     }
 }

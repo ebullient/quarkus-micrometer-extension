@@ -2,15 +2,13 @@ package dev.ebullient.micrometer.runtime.binder.vertx;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Pattern;
 
 import javax.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
-import io.micrometer.core.instrument.*;
-import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
@@ -24,7 +22,7 @@ import io.vertx.core.spi.metrics.VertxMetrics;
 public class VertxMeterBinderAdapter extends MetricsOptions implements MeterBinder, VertxMetricsFactory, VertxMetrics {
     private static final Logger log = Logger.getLogger(VertxMeterBinderAdapter.class);
 
-    AtomicReference<MetricsBinder> vertxMetricsConfig = new AtomicReference<>();
+    final AtomicReference<MetricsBinder> vertxMetricsBinder = new AtomicReference<>();
 
     final List<Pattern> ignorePatterns;
 
@@ -43,7 +41,7 @@ public class VertxMeterBinderAdapter extends MetricsOptions implements MeterBind
     @Override
     public void bindTo(MeterRegistry registry) {
         log.debugf("Bind registry %s to Vertx Metrics", registry);
-        vertxMetricsConfig.set(new MetricsBinder(registry, this));
+        vertxMetricsBinder.set(new MetricsBinder(registry, this));
     }
 
     @Override
@@ -69,7 +67,7 @@ public class VertxMeterBinderAdapter extends MetricsOptions implements MeterBind
     @Override
     public HttpServerMetrics<?, ?, ?> createHttpServerMetrics(HttpServerOptions options, SocketAddress localAddress) {
         log.debugf("Create HttpServerMetrics with options %s and address %s", options, localAddress);
-        MetricsBinder binder = vertxMetricsConfig.get();
+        MetricsBinder binder = vertxMetricsBinder.get();
         if (binder == null) {
             throw new IllegalStateException("MeterRegistry was not resolved");
         }
@@ -80,34 +78,9 @@ public class VertxMeterBinderAdapter extends MetricsOptions implements MeterBind
         final MeterRegistry registry;
         final VertxMeterBinderAdapter meterBinder;
 
-        final LongAdder activeHttpServerRequests;
-        final LongAdder activeServerWebsocketConnections;
-        final LongAdder activeHttpConnections;
-        final Map<String, Counter> httpErrorCount;
-
-        final Counter.Builder httpServerRequestReset;
-        final Timer.Builder httpServerRequestsTimer;
-        final DistributionSummary.Builder httpBytesRead;
-        final DistributionSummary.Builder httpBytesWritten;
-
         MetricsBinder(MeterRegistry registry, VertxMeterBinderAdapter meterBinder) {
             this.registry = registry;
             this.meterBinder = meterBinder;
-            this.httpServerRequestReset = Counter.builder("http.server.request.reset");
-            this.httpServerRequestsTimer = Timer.builder("http.server.requests");
-            this.httpBytesRead = DistributionSummary.builder("http.server.bytes.read");
-            this.httpBytesWritten = DistributionSummary.builder("http.server.bytes.written");
-
-            this.activeHttpServerRequests = registry.gauge("http.server.requests.active", new LongAdder());
-            this.activeServerWebsocketConnections = registry.gauge("http.server.websockets.active", new LongAdder());
-            this.activeHttpConnections = registry.gauge("http.server.connections", new LongAdder());
-
-            this.httpErrorCount = new HashMap<String, Counter>();
-        }
-
-        void incrementErrorCount(String exceptionName) {
-            httpErrorCount.computeIfAbsent(exceptionName, k -> Counter.builder(k).tag("class", k).register(registry))
-                    .increment();
         }
 
         List<Pattern> getIgnorePatterns() {

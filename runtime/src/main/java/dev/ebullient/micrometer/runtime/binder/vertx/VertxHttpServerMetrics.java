@@ -14,6 +14,9 @@
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
 import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderAdapter.MetricsBinder;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.LongTaskTimer;
+import io.micrometer.core.instrument.Tags;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -22,7 +25,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.core.spi.metrics.HttpServerMetrics;
 
 public class VertxHttpServerMetrics
-        implements HttpServerMetrics<MeasureRequest, String, MeasureHttpSocket> {
+        implements HttpServerMetrics<MeasureRequest, LongTaskTimer.Sample, LongTaskTimer.Sample> {
 
     final MetricsBinder binder;
 
@@ -32,49 +35,103 @@ public class VertxHttpServerMetrics
 
     /** -> MeasureHttpSocket */
     @Override
-    public MeasureHttpSocket connected(SocketAddress remoteAddress, String remoteName) {
-        return new MeasureHttpSocket(binder)
-                .connected(remoteAddress, remoteName);
+    public LongTaskTimer.Sample connected(SocketAddress remoteAddress, String remoteName) {
+        return LongTaskTimer.builder("http.server.connections")
+                .register(binder.registry)
+                .start();
     }
 
     /** MeasureHttpSocket */
     @Override
-    public void disconnected(MeasureHttpSocket socketMetric, SocketAddress remoteAddress) {
-        socketMetric.disconnected(remoteAddress);
+    public void disconnected(LongTaskTimer.Sample socketMetric, SocketAddress remoteAddress) {
+        socketMetric.stop();
     }
 
-    /** MeasureHttpSocket */
+    /**
+     * Called when bytes have been read
+     *
+     * @param socketMetric the socket metric, null for UDP
+     * @param remoteAddress the remote address which this socket received bytes from
+     * @param numberOfBytes the number of bytes read
+     */
     @Override
-    public void bytesRead(MeasureHttpSocket socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
-        socketMetric.bytesRead(remoteAddress, numberOfBytes);
+    public void bytesRead(LongTaskTimer.Sample socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
+        DistributionSummary.builder("http.server.bytes.read")
+                .register(binder.registry)
+                .record(numberOfBytes);
     }
 
-    /** MeasureHttpSocket */
+    /**
+     * Called when bytes have been written
+     *
+     * @param socketMetric the socket metric, null for UDP
+     * @param remoteAddress the remote address which bytes are being written to
+     * @param numberOfBytes the number of bytes written
+     */
     @Override
-    public void bytesWritten(MeasureHttpSocket socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
-        socketMetric.bytesWritten(remoteAddress, numberOfBytes);
+    public void bytesWritten(LongTaskTimer.Sample socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
+        DistributionSummary.builder("http.server.bytes.written")
+                .register(binder.registry)
+                .record(numberOfBytes);
     }
 
-    /** MeasureHttpSocket -> MeasureRequest */
+    /**
+     * Called when exceptions occur for a specific connection.
+     *
+     * @param socketMetric the socket metric, null for UDP
+     * @param remoteAddress the remote address of the connection or null if it's datagram/udp
+     * @param t the exception that occurred
+     */
     @Override
-    public MeasureRequest requestBegin(MeasureHttpSocket socketMetric, HttpServerRequest request) {
-        return new MeasureRequest(binder, request).requestBegin();
+    public void exceptionOccurred(LongTaskTimer.Sample socketMetric, SocketAddress remoteAddress, Throwable t) {
+        binder.registry.counter("http.server.errors", "class", t.getClass().getName()).increment();
     }
 
-    /** MeasureHttpSocket -> MeasureRequest */
+    /**
+     * Called when an http server response is pushed.
+     *
+     * @param socketMetric the socket metric
+     * @param method the pushed response method
+     * @param uri the pushed response uri
+     * @param response the http server response
+     * @return the request metric
+     */
     @Override
-    public MeasureRequest responsePushed(MeasureHttpSocket socketMetric, HttpMethod method, String uri,
+    public MeasureRequest responsePushed(LongTaskTimer.Sample socketMetric, HttpMethod method, String uri,
             HttpServerResponse response) {
         return new MeasureRequest(binder, method, uri).responsePushed(response);
     }
 
-    /** MeasureRequest */
+    /**
+     * Called when an http server request begins. Vert.x will invoke {@link #responseEnd} when the response has ended
+     * or {@link #requestReset} if the request/response has failed before.
+     *
+     * @param socketMetric the socket metric
+     * @param request the http server reuqest
+     * @return the request metric
+     */
+    @Override
+    public MeasureRequest requestBegin(LongTaskTimer.Sample socketMetric, HttpServerRequest request) {
+        return new MeasureRequest(binder, request).requestBegin();
+    }
+
+    /**
+     * Called when the http server request couldn't complete successfully, for instance the connection
+     * was closed before the response was sent.
+     *
+     * @param requestMetric the request metric
+     */
     @Override
     public void requestReset(MeasureRequest requestMetric) {
         requestMetric.requestReset();
     }
 
-    /** MeasureRequest */
+    /**
+     * Called when an http server response has ended.
+     *
+     * @param requestMetric the request metric
+     * @param response the http server request
+     */
     @Override
     public void responseEnd(MeasureRequest requestMetric, HttpServerResponse response) {
         requestMetric.responseEnd(response);
@@ -82,15 +139,17 @@ public class VertxHttpServerMetrics
 
     /** MeasureHttpSocket & MeasureRequest -> MeasureWebSocket */
     @Override
-    public String connected(MeasureHttpSocket socketMetric, MeasureRequest requestMetric,
+    public LongTaskTimer.Sample connected(LongTaskTimer.Sample socketMetric, MeasureRequest requestMetric,
             ServerWebSocket serverWebSocket) {
-        binder.activeServerWebsocketConnections.increment();
-        return requestMetric.requestPath;
+        return LongTaskTimer.builder("http.server.websocket.connections")
+                .tags(Tags.of(VertxMetricsTags.uri(binder.getMatchPatterns(), requestMetric.requestPath, null)))
+                .register(binder.registry)
+                .start();
     }
 
     /** MeasureWebSocket */
     @Override
-    public void disconnected(String requestPath) {
-        binder.activeServerWebsocketConnections.decrement();
+    public void disconnected(LongTaskTimer.Sample websocketMetric) {
+        websocketMetric.stop();
     }
 }

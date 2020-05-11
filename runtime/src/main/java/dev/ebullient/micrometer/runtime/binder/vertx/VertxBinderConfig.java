@@ -24,5 +24,5 @@ public class VertxBinderConfig {
      * that should be ignored / not measured.
      */
     @ConfigItem
-    Optional<List<String>> ignorePatterns = Optional.empty();;
+    Optional<List<String>> ignorePatterns = Optional.empty();
 }
