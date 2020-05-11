@@ -33,7 +33,7 @@ public class MeasureRequest {
 
     public MeasureRequest responsePushed(HttpServerResponse response) {
         if (this.requestPath != null) {
-            
+
             binder.registry.counter("http.server.push", Tags.of(
                     VertxMetricsTags.uri(binder.getMatchPatterns(), requestPath, response),
                     VertxMetricsTags.method(method),
