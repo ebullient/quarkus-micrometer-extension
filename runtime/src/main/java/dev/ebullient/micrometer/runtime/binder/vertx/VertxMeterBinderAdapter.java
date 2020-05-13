@@ -1,6 +1,8 @@
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 

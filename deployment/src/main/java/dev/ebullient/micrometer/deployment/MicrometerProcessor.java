@@ -8,6 +8,7 @@ import java.util.function.BooleanSupplier;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
+import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
@@ -88,15 +89,15 @@ public class MicrometerProcessor {
 
         // Find classes that define MeterRegistries, MeterBinders, and MeterFilters
         Collection<String> knownRegistries = new HashSet<>();
-        index.getAllKnownSubclasses(METER_REGISTRY).forEach(x -> knownRegistries.add(x.name().toString()));
+        collectNames(index.getAllKnownSubclasses(METER_REGISTRY), knownRegistries);
 
         Collection<String> knownClasses = new HashSet<>();
         knownClasses.add(METER_BINDER.toString());
-        index.getAllKnownImplementors(METER_BINDER).forEach(x -> knownClasses.add(x.name().toString()));
+        collectNames(index.getAllKnownImplementors(METER_BINDER), knownClasses);
         knownClasses.add(METER_FILTER.toString());
-        index.getAllKnownImplementors(METER_FILTER).forEach(x -> knownClasses.add(x.name().toString()));
+        collectNames(index.getAllKnownImplementors(METER_FILTER), knownClasses);
         knownClasses.add(NAMING_CONVENTION.toString());
-        index.getAllKnownImplementors(NAMING_CONVENTION).forEach(x -> knownClasses.add(x.name().toString()));
+        collectNames(index.getAllKnownImplementors(NAMING_CONVENTION), knownClasses);
 
         Set<String> keepMe = new HashSet<>();
 
@@ -133,14 +134,22 @@ public class MicrometerProcessor {
         return new UnremovableBeanBuildItem(new UnremovableBeanBuildItem.BeanClassNamesExclusion(keepMe));
     }
 
+    void collectNames(Collection<ClassInfo> classes, Collection<String> names) {
+        for (ClassInfo info : classes) {
+            names.add(info.name().toString());
+        }
+    }
+
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.RUNTIME_INIT)
     void configureRegistry(MicrometerRecorder recorder,
-            List<MicrometerRegistryProviderBuildItem> providerClasses,
+            List<MicrometerRegistryProviderBuildItem> providerClassItems,
             ShutdownContextBuildItem shutdownContextBuildItem) {
 
         Set<Class<? extends MeterRegistry>> typeClasses = new HashSet<>();
-        providerClasses.forEach(x -> typeClasses.add(x.getRegistryClass()));
+        for (MicrometerRegistryProviderBuildItem item : providerClassItems) {
+            typeClasses.add(item.getRegistryClass());
+        }
         recorder.configureRegistry(typeClasses, shutdownContextBuildItem);
     }
 

@@ -31,14 +31,56 @@ class PrometheusMetricsRegistryTest {
 
     @Test
     @Order(2)
+    void testUnknownUrl() {
+        given()
+                .when().get("/messsage/notfound")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    @Order(3)
+    void testServerError() {
+        given()
+                .when().get("/message/fail")
+                .then()
+                .statusCode(500);
+    }
+
+    @Test
+    @Order(3)
+    void testPathParameter() {
+        given()
+                .when().get("/message/item/123")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    @Order(10)
     void testPrometheusScrapeEndpoint() {
         given()
                 .when().get("/prometheus")
                 .then()
                 .log().body()
                 .statusCode(200)
+
+                // Prometheus body has ALL THE THINGS in no particular order
+
                 .body(containsString("registry=\"prometheus\""))
                 .body(containsString("env=\"test\""))
-                .body(containsString("http_server_requests"));
+                .body(containsString("http_server_requests"))
+
+                .body(containsString("status=\"404\""))
+                .body(containsString("uri=\"NOT_FOUND\""))
+                .body(containsString("outcome=\"CLIENT_ERROR\""))
+
+                .body(containsString("status=\"500\""))
+                .body(containsString("uri=\"/message/fail\""))
+                .body(containsString("outcome=\"SERVER_ERROR\""))
+
+                .body(containsString("status=\"200\""))
+                .body(containsString("uri=\"/message\""))
+                .body(containsString("outcome=\"SUCCESS\""));
     }
 }
