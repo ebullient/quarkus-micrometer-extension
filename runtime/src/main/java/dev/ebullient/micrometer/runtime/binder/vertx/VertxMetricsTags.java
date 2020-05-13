@@ -57,7 +57,7 @@ public class VertxMetricsTags {
 
     /**
      * Creates an {@code outcome} {@code Tag} derived from the given {@code response}.
-     * 
+     *
      * @param response the response
      * @return the outcome tag
      */
@@ -87,11 +87,11 @@ public class VertxMetricsTags {
      * for all other requests.
      *
      *
-     * @param matchPattern
+     * @param pathInfo
      * @param response the response
      * @return the uri tag derived from the request
      */
-    public static Tag uri(List<Pattern> matchPattern, String pathInfo, HttpServerResponse response) {
+    public static Tag uri(String pathInfo, HttpServerResponse response) {
         if (response != null) {
             int code = response.getStatusCode();
             if (code / 100 == 3) {
@@ -107,22 +107,15 @@ public class VertxMetricsTags {
             return URI_ROOT;
         }
 
-        // TODO: matched/filtered URIs
-
         // Use first segment of request path
-        int pos = pathInfo.indexOf('/', 1);
-        if (pos > 0) {
-            return Tag.of("uri", pathInfo.substring(0, pos));
-        } else {
-            return Tag.of("uri", pathInfo);
-        }
+        return Tag.of("uri", pathInfo);
     }
 
     /**
      * Extract the path out of the uri. Return null if the path should be
      * ignored.
      */
-    static String parseUriPath(List<Pattern> ignorePatterns, String uri) {
+    static String parseUriPath(List<Pattern> matchPattern, List<Pattern> ignorePatterns, String uri) {
         if (uri == null) {
             return null;
         }

@@ -19,6 +19,7 @@ import io.quarkus.runtime.annotations.ConfigItem;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.quarkus.vertx.core.deployment.VertxOptionsConsumerBuildItem;
+import io.quarkus.vertx.http.deployment.FilterBuildItem;
 
 public class VertxBinderProcessor {
 
@@ -58,12 +59,15 @@ public class VertxBinderProcessor {
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
                 .addBeanClass(VertxMeterBinderAdapter.class)
                 .setUnremovable().build());
-
     }
 
     @BuildStep(onlyIf = VertxBinderEnabled.class)
     @Record(value = ExecutionTime.RUNTIME_INIT)
-    VertxOptionsConsumerBuildItem build(VertxMeterBinderRecorder recorder) {
+    VertxOptionsConsumerBuildItem build(VertxMeterBinderRecorder recorder,
+            BuildProducer<FilterBuildItem> filterBuildItemBuildProducer) {
+
+        filterBuildItemBuildProducer.produce(new FilterBuildItem(recorder.createRouteFilter(), 10));
+
         return new VertxOptionsConsumerBuildItem(recorder.configureMetricsAdapter(), Interceptor.Priority.LIBRARY_AFTER);
     }
 }

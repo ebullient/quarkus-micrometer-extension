@@ -1,6 +1,7 @@
 package dev.ebullient.micrometer.runtime;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,7 +34,7 @@ public class MicrometerRecorder {
 
         // Filters to change/constrain construction/output of metrics
         // Customize registries by class or type
-        registryClasses.forEach(typeClass -> {
+        for (Class<? extends MeterRegistry> typeClass : registryClasses) {
             // @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters
             Instance<MeterFilter> classFilters = CDI.current().select(MeterFilter.class,
                     new MeterFilterConstraint.Literal(typeClass));
@@ -41,19 +42,23 @@ public class MicrometerRecorder {
 
             log.debugf("Configuring %s instances. hasFilters=%s", typeClass, !classFilters.isUnsatisfied());
             if (!classFilters.isUnsatisfied() && !typedRegistries.isUnsatisfied()) {
-                typedRegistries.forEach(registry -> {
-                    classFilters.forEach(x -> registry.config().meterFilter(x));
-                });
+                for (Iterator<? extends MeterRegistry> registries = typedRegistries.iterator(); registries.hasNext();) {
+                    for (Iterator<MeterFilter> filters = classFilters.iterator(); filters.hasNext();) {
+                        registries.next().config().meterFilter(filters.next());
+                    }
+                }
             }
-        });
+        }
 
         // Customize all registries (global/common tags, e.g.)
-        Instance<MeterFilter> filters = CDI.current().select(MeterFilter.class, Default.Literal.INSTANCE);
-        log.debugf("Configuring all registries. hasFilters=%s", !filters.isUnsatisfied());
-        if (!filters.isUnsatisfied()) {
-            allRegistries.forEach(registry -> {
-                filters.forEach(x -> registry.config().meterFilter(x));
-            });
+        Instance<MeterFilter> generalFilters = CDI.current().select(MeterFilter.class, Default.Literal.INSTANCE);
+        log.debugf("Configuring all registries. hasFilters=%s", !generalFilters.isUnsatisfied());
+        if (!generalFilters.isUnsatisfied()) {
+            for (Iterator<? extends MeterRegistry> registries = allRegistries.iterator(); registries.hasNext();) {
+                for (Iterator<MeterFilter> filters = generalFilters.iterator(); filters.hasNext();) {
+                    registries.next().config().meterFilter(filters.next());
+                }
+            }
         }
 
         log.debugf("Configuring root registry : %s", rootRegistry);
@@ -63,11 +68,10 @@ public class MicrometerRecorder {
         }
 
         // Binders must be last, apply to "top-level" registry
-        Instance<MeterBinder> binders = CDI.current().select(MeterBinder.class, Any.Literal.INSTANCE);
-        binders.forEach(binder -> {
-            log.debugf("Binding %s", binder);
-            binder.bindTo(rootRegistry);
-        });
+        Instance<MeterBinder> allBinders = CDI.current().select(MeterBinder.class, Any.Literal.INSTANCE);
+        for (Iterator<MeterBinder> binders = allBinders.iterator(); binders.hasNext();) {
+            binders.next().bindTo(rootRegistry);
+        }
 
         // Add the current CDI root registry to the global composite
         Metrics.addRegistry(rootRegistry);
