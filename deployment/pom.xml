@@ -53,8 +53,8 @@
       <artifactId>quarkus-vertx-http-deployment</artifactId>
     </dependency>
     <dependency>
-        <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-resteasy-common-spi</artifactId>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy-server-common-deployment</artifactId>
     </dependency>
 
     <dependency>
