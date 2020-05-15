@@ -15,6 +15,7 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
+import io.quarkus.resteasy.common.spi.ResteasyJaxrsProviderBuildItem;
 import io.quarkus.runtime.annotations.ConfigItem;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
@@ -52,13 +53,22 @@ public class VertxBinderProcessor {
     }
 
     @BuildStep(onlyIf = VertxBinderEnabled.class)
-    void createPrometheusRegistry(CombinedIndexBuildItem index,
+    void createVertxAdapters(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 
-        // Add the Prometheus Registry Producer
+        // Add Vertx meter adapters
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
                 .addBeanClass(VertxMeterBinderAdapter.class)
+                .addBeanClass("dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderContainerFilter")
                 .setUnremovable().build());
+    }
+
+    @BuildStep(onlyIf = VertxBinderEnabled.class)
+    void createVertxFilters(BuildProducer<ResteasyJaxrsProviderBuildItem> jaxRsProviders) {
+
+        jaxRsProviders.produce(
+                new ResteasyJaxrsProviderBuildItem(
+                        "dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderContainerFilter"));
     }
 
     @BuildStep(onlyIf = VertxBinderEnabled.class)
