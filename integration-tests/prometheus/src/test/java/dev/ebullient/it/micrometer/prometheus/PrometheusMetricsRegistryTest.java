@@ -81,6 +81,7 @@ class PrometheusMetricsRegistryTest {
 
                 .body(containsString("status=\"200\""))
                 .body(containsString("uri=\"/message\""))
+                .body(containsString("uri=\"/message/item/{id}\""))
                 .body(containsString("outcome=\"SUCCESS\""));
     }
 }

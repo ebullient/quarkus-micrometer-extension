@@ -33,7 +33,7 @@ public class VertxMeterBinderContainerFilter implements ContainerRequestFilter {
             }
 
             log.debugf("Saving parameterized path %s in %s", path, routingContext);
-            routingContext.put(VertxHttpServerMetrics.HTTP_REQUEST_PATH, path);
+            routingContext.put(VertxHttpServerMetrics.METER_HTTP_REQUEST_PATH, path);
         }
     }
 }

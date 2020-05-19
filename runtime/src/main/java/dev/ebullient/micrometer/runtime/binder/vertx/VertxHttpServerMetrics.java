@@ -35,15 +35,22 @@ import io.vertx.ext.web.RoutingContext;
 public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTaskTimer.Sample, Context> {
     static final Logger log = Logger.getLogger(VertxHttpServerMetrics.class);
 
-    static final String SOCKET_METRIC = "HTTP_SOCKET_METRIC";
-    static final String HTTP_REQUEST_PATH = "HTTP_REQUEST_PATH";
-    static final String HTTP_REQUEST_SAMPLE = "HTTP_REQUEST_SAMPLE";
-    static final String ROUTING_CONTEXT = "ROUTING_CONTEXT";
+    static final String METER_HTTP_SOCKET_METRIC = "METER_HTTP_SOCKET_METRIC";
+    static final String METER_HTTP_REQUEST_PATH = "METER_HTTP_REQUEST_PATH";
+    static final String METER_HTTP_REQUEST_SAMPLE = "METER_HTTP_REQUEST_SAMPLE";
+    static final String METER_ROUTING_CONTEXT = "METER_ROUTING_CONTEXT";
 
     final MetricsBinder binder;
 
     public VertxHttpServerMetrics(MetricsBinder binder) {
         this.binder = binder;
+    }
+
+    private void cleanUp(Context source) {
+        source.remove(METER_HTTP_REQUEST_PATH);
+        source.remove(METER_HTTP_REQUEST_SAMPLE);
+        source.remove(METER_ROUTING_CONTEXT);
+        source.remove(METER_HTTP_SOCKET_METRIC);
     }
 
     /**
@@ -61,7 +68,8 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
     @Override
     public Context connected(SocketAddress remoteAddress, String remoteName) {
         Context context = getCurrentContext("connected");
-        context.put(SOCKET_METRIC, LongTaskTimer.builder("http.server.connections").register(binder.registry).start());
+        context.put(METER_HTTP_SOCKET_METRIC,
+                LongTaskTimer.builder("http.server.connections").register(binder.registry).start());
         return context;
     }
 
@@ -74,10 +82,10 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public void disconnected(Context socketMetric, SocketAddress remoteAddress) {
-        RoutingContext rctx = getRoutingContext("disconnected", socketMetric);
-        LongTaskTimer.Sample sample = (LongTaskTimer.Sample) socketMetric.get(SOCKET_METRIC);
-        sample.stop();
         log.debugf("Disconnected %s", socketMetric);
+        LongTaskTimer.Sample sample = (LongTaskTimer.Sample) socketMetric.get(METER_HTTP_SOCKET_METRIC);
+        sample.stop();
+        cleanUp(socketMetric);
     }
 
     /**
@@ -89,7 +97,6 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public void bytesRead(Context socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
-        RoutingContext rctx = getRoutingContext("bytesRead", socketMetric);
         DistributionSummary.builder("http.server.bytes.read").register(binder.registry).record(numberOfBytes);
     }
 
@@ -102,7 +109,6 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public void bytesWritten(Context socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
-        RoutingContext rctx = getRoutingContext("bytesWritten", socketMetric);
         DistributionSummary.builder("http.server.bytes.written").register(binder.registry).record(numberOfBytes);
     }
 
@@ -116,7 +122,6 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public void exceptionOccurred(Context socketMetric, SocketAddress remoteAddress, Throwable t) {
-        RoutingContext rctx = getRoutingContext("exceptionOccurred", socketMetric);
         binder.registry.counter("http.server.errors", "class", t.getClass().getName()).increment();
     }
 
@@ -131,8 +136,6 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public Context responsePushed(Context socketMetric, HttpMethod method, String uri, HttpServerResponse response) {
-        RoutingContext rctx = getRoutingContext("responsePushed", socketMetric);
-
         String path = VertxMetricsTags.parseUriPath(this.binder.getMatchPatterns(), this.binder.getIgnorePatterns(),
                 uri);
         if (path != null) {
@@ -158,9 +161,12 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
         String path = VertxMetricsTags.parseUriPath(binder.getMatchPatterns(), binder.getIgnorePatterns(),
                 request.uri());
         if (path != null) {
-            socketMetric.put(HTTP_REQUEST_PATH, path);
-            socketMetric.put(HTTP_REQUEST_SAMPLE,
+            // Pre-add the request method tag to the sample
+            socketMetric.put(METER_HTTP_REQUEST_SAMPLE,
                     Timer.start(binder.registry).tags(Tags.of(VertxMetricsTags.method(request.method()))));
+
+            // remember the path to monitor for use later (maybe a 404 or redirect..)
+            socketMetric.put(METER_HTTP_REQUEST_PATH, path);
         }
         return socketMetric;
     }
@@ -173,7 +179,7 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public void requestReset(Context requestMetric) {
-        Timer.Sample sample = requestMetric.get(HTTP_REQUEST_SAMPLE);
+        Timer.Sample sample = requestMetric.get(METER_HTTP_REQUEST_SAMPLE);
         if (sample != null) {
             String requestPath = getRequestPath("requestReset", requestMetric);
             sample.stop(binder.registry,
@@ -190,7 +196,7 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public void responseEnd(Context requestMetric, HttpServerResponse response) {
-        Timer.Sample sample = requestMetric.get(HTTP_REQUEST_SAMPLE);
+        Timer.Sample sample = requestMetric.get(METER_HTTP_REQUEST_SAMPLE);
         if (sample != null) {
             String requestPath = getRequestPath("responseEnd", requestMetric);
 
@@ -236,18 +242,18 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
     private String getRequestPath(String caller, Context source) {
         RoutingContext rctx = getRoutingContext(caller, source);
         if (rctx != null) {
-            String path = rctx.get(HTTP_REQUEST_PATH);
+            String path = rctx.get(METER_HTTP_REQUEST_PATH);
             if (path != null) {
                 log.debugf("Using path from routing context %s", path);
                 return path;
             }
         }
-        return source.get(HTTP_REQUEST_PATH);
+        return source.get(METER_HTTP_REQUEST_PATH);
     }
 
     private RoutingContext getRoutingContext(String caller, Context source) {
         @Nullable
-        RoutingContext routingContext = source.get(ROUTING_CONTEXT);
+        RoutingContext routingContext = source.get(METER_ROUTING_CONTEXT);
         return routingContext;
     }
 
