@@ -36,11 +36,11 @@ public class VertxMeterBinderRecorder {
                 final Context context = Vertx.currentContext();
                 log.debugf("Handling event %s with context %s", event, context);
 
-                context.put(VertxHttpServerMetrics.ROUTING_CONTEXT, event);
+                context.put(VertxHttpServerMetrics.METER_ROUTING_CONTEXT, event);
                 event.addBodyEndHandler(new Handler<Void>() {
                     @Override
                     public void handle(Void x) {
-                        context.remove(VertxHttpServerMetrics.ROUTING_CONTEXT);
+                        context.remove(VertxHttpServerMetrics.METER_ROUTING_CONTEXT);
                     }
                 });
 
