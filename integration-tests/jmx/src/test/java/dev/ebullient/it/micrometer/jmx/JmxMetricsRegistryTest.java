@@ -1,4 +1,4 @@
-package dev.ebullient.it.micrometer.prometheus;
+package dev.ebullient.it.micrometer.jmx;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -18,7 +18,7 @@ import io.quarkus.test.junit.QuarkusTest;
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class PrometheusMetricsRegistryTest {
+class JmxMetricsRegistryTest {
 
     @Test
     @Order(1)
@@ -27,7 +27,7 @@ class PrometheusMetricsRegistryTest {
                 .when().get("/message")
                 .then()
                 .statusCode(200)
-                .body(containsString("io.micrometer.core.instrument.composite.CompositeMeterRegistry"));
+                .body(containsString("io.micrometer.jmx.JmxMeterRegistry"));
     }
 
     @Test
@@ -59,31 +59,28 @@ class PrometheusMetricsRegistryTest {
 
     @Test
     @Order(10)
-    void testPrometheusScrapeEndpoint() {
+    void testJmxReporter() {
+
         given()
-                .when().get("/prometheus")
+                .when().get("/message/mbeans")
                 .then()
-                .log().body()
                 .statusCode(200)
 
-                // Prometheus body has ALL THE THINGS in no particular order
+                // JMX endpoint is returning a subset of mbean objects to inspect
+                // hierarchical naming means all tags are present: registry=jmx, and env=test
 
-                .body(containsString("registry=\"prometheus\""))
-                .body(containsString("env=\"test\""))
-                .body(containsString("http_server_requests"))
+                // Generic connection statistic
+                .body(containsString("metrics:name=httpServerConnections.env.test.registry.jmx.statistic"))
 
-                .body(containsString("status=\"404\""))
-                .body(containsString("uri=\"NOT_FOUND\""))
-                .body(containsString("outcome=\"CLIENT_ERROR\""))
+                .body(containsString(
+                        "metrics:name=httpServerRequests.env.test.method.GET.outcome.CLIENT_ERROR.registry.jmx.status.404.uri.NOT_FOUND"))
+                .body(containsString(
+                        "metrics:name=httpServerRequests.env.test.method.GET.outcome.SERVER_ERROR.registry.jmx.status.500.uri./message/fail"))
 
-                .body(containsString("status=\"500\""))
-                .body(containsString("uri=\"/message/fail\""))
-                .body(containsString("outcome=\"SERVER_ERROR\""))
-
-                .body(containsString("status=\"200\""))
-                .body(containsString("uri=\"/message\""))
-                .body(containsString("uri=\"/message/item/{id}\""))
-                .body(containsString("outcome=\"SUCCESS\""))
+                .body(containsString(
+                        "metrics:name=httpServerRequests.env.test.method.GET.outcome.SUCCESS.registry.jmx.status.200.uri./message"))
+                .body(containsString(
+                        "metrics:name=httpServerRequests.env.test.method.GET.outcome.SUCCESS.registry.jmx.status.200.uri./message/item/{id}"))
 
                 // this was defined by a tag to a non-matching registry, and should not be found
                 .body(not(containsString("class-should-not-match")));

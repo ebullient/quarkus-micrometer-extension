@@ -1,4 +1,4 @@
-package dev.ebullient.it.micrometer.prometheus;
+package dev.ebullient.it.micrometer.jmx;
 
 import java.util.Arrays;
 
@@ -8,12 +8,9 @@ import javax.inject.Singleton;
 import javax.interceptor.Interceptor;
 
 import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
-import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.config.MeterFilter;
-import io.micrometer.prometheus.PrometheusConfig;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
-import io.prometheus.client.CollectorRegistry;
+import io.micrometer.jmx.JmxMeterRegistry;
 
 @Singleton
 @Priority(Interceptor.Priority.APPLICATION - 100)
@@ -21,10 +18,10 @@ public class CustomConfiguration {
 
     @Produces
     @Singleton
-    @MeterFilterConstraint(applyTo = PrometheusMeterRegistry.class)
+    @MeterFilterConstraint(applyTo = JmxMeterRegistry.class)
     public MeterFilter configurePrometheusRegistries() {
         return MeterFilter.commonTags(Arrays.asList(
-                Tag.of("registry", "prometheus")));
+                Tag.of("registry", "jmx")));
     }
 
     @Produces
@@ -40,16 +37,5 @@ public class CustomConfiguration {
     public MeterFilter configureAllRegistries() {
         return MeterFilter.commonTags(Arrays.asList(
                 Tag.of("env", "test")));
-    }
-
-    /**
-     * Produce a custom prometheus configuration that is isolated/separate from
-     * the application (and won't be connected to the Quarkus configured application
-     * endpoint).
-     */
-    @Produces
-    @Singleton
-    public PrometheusMeterRegistry registry(CollectorRegistry collectorRegistry, Clock clock) {
-        return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT, collectorRegistry, clock);
     }
 }

@@ -35,6 +35,7 @@
   </properties>
 
   <modules>
+    <module>jmx</module>
     <module>prometheus</module>
   </modules>
 
