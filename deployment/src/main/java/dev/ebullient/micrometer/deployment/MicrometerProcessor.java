@@ -21,6 +21,7 @@ import dev.ebullient.micrometer.runtime.MeterFilterConstraints;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.binder.JvmMetricsProvider;
 import dev.ebullient.micrometer.runtime.binder.SystemMetricsProvider;
+import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.micrometer.core.instrument.config.MeterFilter;
@@ -46,7 +47,7 @@ public class MicrometerProcessor {
     private static final String FEATURE = "micrometer";
 
     static class MicrometerEnabled implements BooleanSupplier {
-        MicrometerBuildTimeConfig mConfig;
+        MicrometerConfig mConfig;
 
         public boolean getAsBoolean() {
             return mConfig.enabled;
