@@ -26,7 +26,7 @@ public class DatadogMeterRegistryProvider {
         final Map<String, String> properties = MicrometerRecorder.captureProperties(config, PREFIX);
 
         // Special check: if publish is set, override the value of enabled
-        // Specifically, The datadov registry must be enabled for this
+        // Specifically, The datadog registry must be enabled for this
         // Provider to even be present. If this instance (at runtime) wants
         // to prevent metrics from being published, then it would set
         // quarkus.micrometer.export.datadog.publish=false

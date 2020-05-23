@@ -10,6 +10,7 @@ import javax.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.runtime.config.runtime.VertxConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.vertx.core.VertxOptions;
@@ -28,7 +29,7 @@ public class VertxMeterBinderAdapter extends MetricsOptions implements MeterBind
 
     final List<Pattern> ignorePatterns;
 
-    public VertxMeterBinderAdapter(VertxBinderConfig config) {
+    public VertxMeterBinderAdapter(VertxConfig config) {
         if (config.ignorePatterns.isPresent()) {
             List<String> stringPatterns = config.ignorePatterns.get();
             ignorePatterns = new ArrayList<>(stringPatterns.size());

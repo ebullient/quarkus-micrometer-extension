@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.runtime.binder.vertx;
+package dev.ebullient.micrometer.runtime.config.runtime;
 
 import java.util.List;
 import java.util.Optional;
@@ -8,7 +8,7 @@ import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
 
 @ConfigRoot(name = "micrometer.binder.vertx", phase = ConfigPhase.RUN_TIME)
-public class VertxBinderConfig {
+public class VertxConfig {
     /**
      * Comma-separated case-sensitive list of regular expressions defining Paths
      * that should be matched and used as tags. By default, the first path
@@ -17,12 +17,12 @@ public class VertxBinderConfig {
      * in this list.
      */
     @ConfigItem
-    Optional<List<String>> matchPatterns = Optional.empty();
+    public Optional<List<String>> matchPatterns = Optional.empty();
 
     /**
      * Comma-separated case-sensitive list of regular expressions defining Paths
      * that should be ignored / not measured.
      */
     @ConfigItem
-    Optional<List<String>> ignorePatterns = Optional.empty();
+    public Optional<List<String>> ignorePatterns = Optional.empty();
 }
