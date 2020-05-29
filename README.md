@@ -1,6 +1,13 @@
 # quarkus-micrometer-extension
 
-This is a quarkus extension that performs build time initialization, configuration, and injection of registries for micrometer. This is not yet a comprehensive implementation. Support for registry implementations will be incremental, starting with Prometheus and JMX (JVM-mode only).
+This is a quarkus extension that performs build time initialization, configuration, and injection of MeterRegistry, MeterBinder, and MeterFilter isntances for micrometer. This is not yet a comprehensive implementation. Support for registry implementations will be incremental, starting with Prometheus and JMX (JVM-mode only).
+
+Most things should "just work" after enabling the extension. You'll need to: 
+
+1. Include the quarkus-micrometer-extension dependency (and related quarkus version)
+2. Include micrometer-core if you are using micrometer APIs
+3. Include the micromter registry of your choice (e.g. micrometer-registry-prometheus)
+
 
 ## Using a SNAPSHOT
 
@@ -16,7 +23,7 @@ SNAPSHOT releases use JitPack:
 
   <properties>
     <!-- Experimental branch is built against the master branch of quarkus (999-SNAPSHOT) -->
-    <quarkus-micrometer-extension.version>999-SNAPSHOT</quarkus-micrometer-extension.version>
+    <quarkus-micrometer-extension.version>1.0.0-SNAPSHOT</quarkus-micrometer-extension.version>
     <micrometer.version>1.5.0</micrometer.version>
   </properties>
 
@@ -41,7 +48,7 @@ SNAPSHOT releases use JitPack:
   </dependencies>
 ```
 
-A fetch may take a bit if the snapshot has been updated, and you're the first to try grabbing it.
+Jitpack builds maven modules from source at first request, so a fetch may take a bit if the snapshot has been updated and you're the first to try grabbing it.
 
 ## Config notes (not organized, shown with defaults)
 
@@ -54,47 +61,63 @@ quarkus.micrometer.enabled=true
 Should registries discovered on the classpath be enabled by default (default=true)?
 
 ```properties
-quarkus.micrometer.registry-enabled-default=false
+quarkus.micrometer.registry-enabled-default=true
 ```
+
+Each registry has its own optional attribute to determine whether or not support is enabled. These optional attributes work in tandem with the global default to change discovery behavior. 
+
+* If the registry class is found on the classpath
+  * If the Micrometer Metrics extension (as a whole) is enabled
+    * If `quarkus.micrometer.exporter.*.enabled` is true, the registry is enabled
+    * If `quarkus.micrometer.exporter.*.enabled` is false, the registry is disabled
+    * If `quarkus.micrometer.exporter.*.enabled` is unset AND `quarkus.micrometer.registry-enabled-default` is true, then the registry is enabled.
+    
+In most cases, you'll only have one registry on the classpath, so none of this will matter and it will all just work.   
 
 ### Prometheus support
 
-`PrometheusBuildTimeConfig` defines an _optional_ `enabled` attribute. To disable the prometheus registry:
+To disable the prometheus registry:
 
 ```properties
 quarkus.micrometer.exporter.prometheus.enabled=false
 ```
 
-This optional build-time atribute works together with the above global default as follows:
-
-* If the Prometheus Registry is found on the classpath
-  * If the Micrometer metrics extension(as a whole) is enabled
-    * If `quarkus.micrometer.exporter.prometheus.enabled` OR `quarkus.micrometer.registry-enabled-default` is true
-      * Prometheus support is enabled!
-* ELSE: Prometheus is disabled
-
 ### Using Stackdriver
 
 Stackdriver does not work in native mode, See: https://github.com/grpc/grpc-java/issues/5460.
 
-##
-
-## Bug regarding optional dependencies in deployment modules
-
-https://github.com/quarkusio/quarkus/pull/8487
-https://github.com/quarkusio/quarkus/pull/8488
-
-Due to a bug in how the deployment classpath is constructed, you will need to disable automatic
-detection of micrometer registries on the classpath, and then specifically enable the registry
-(or registries) you want to use.
-
-For example, to enable only Prometheus you will need these two attributes in `application.properties`:
+To disable StackDriver support: 
 
 ```properties
-quarkus.micrometer.registry-enabled-default=false
-quarkus.micrometer.exporter.prometheus.enabled=true
+quarkus.micrometer.exporter.stackdriver.enabled=false
 ```
 
-The default value of `quarkus.micrometer.registry-enabled-default` will remain `true`, which will fail
-until the above bugs are fixed. The properties used to work around the deployment classpath issue
-will continue to work after the bugs are fixed (so they are safe), they just won't be necessary.
+Set the StackDriver project id: 
+
+```properties
+quarkus.micrometer.exporter.stackdriver.project-id=MY_PROJECT_ID
+```
+
+To prevent StackDriver metrics from being published in some environments (while leaving stackdriver support as a whole enabled), use: 
+
+```properties
+quarkus.micrometer.exporter.stackdriver.publish=false
+```
+
+### Using Datadog
+
+Datadog configuration is structured in the same way that Stackdriver configuration is:
+ 
+```properties
+quarkus.micrometer.exporter.datadog.enabled=false
+
+# Define the key used to push data using the Datadog API
+quarkus.micrometer.exporter.datadog.apiKey=YOUR_KEY
+```
+ 
+To prevent Datadog metrics from being published in some environments (while leaving Datadog support as a whole enabled), use: 
+
+```properties
+quarkus.micrometer.exporter.datadog.publish=false
+```
+
