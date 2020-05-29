@@ -6,7 +6,6 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.Config;
-import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.Clock;
@@ -17,7 +16,6 @@ import io.quarkus.arc.DefaultBean;
 
 @Singleton
 public class JmxMeterRegistryProvider {
-    private static final Logger log = Logger.getLogger(JmxMeterRegistryProvider.class);
     static final String PREFIX = "quarkus.micrometer.export.jmx.";
 
     @Produces

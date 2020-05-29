@@ -16,7 +16,7 @@ import javax.inject.Qualifier;
 public @interface MeterFilterConstraint {
     Class<?> applyTo();
 
-    public static final class Literal extends AnnotationLiteral<MeterFilterConstraint> implements MeterFilterConstraint {
+    final class Literal extends AnnotationLiteral<MeterFilterConstraint> implements MeterFilterConstraint {
         private static final long serialVersionUID = 1L;
         private final Class<?> clazz;
 

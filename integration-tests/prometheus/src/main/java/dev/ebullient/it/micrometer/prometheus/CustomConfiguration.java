@@ -29,6 +29,14 @@ public class CustomConfiguration {
 
     @Produces
     @Singleton
+    @MeterFilterConstraint(applyTo = CustomConfiguration.class)
+    public MeterFilter configureNonexistantRegistries() {
+        return MeterFilter.commonTags(Arrays.asList(
+                Tag.of("tag", "class-should-not-match")));
+    }
+
+    @Produces
+    @Singleton
     public MeterFilter configureAllRegistries() {
         return MeterFilter.commonTags(Arrays.asList(
                 Tag.of("env", "test")));

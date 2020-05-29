@@ -1,23 +1,18 @@
 package dev.ebullient.micrometer.deployment.export;
 
-import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.deployment.MicrometerBuildTimeConfig;
-import dev.ebullient.micrometer.deployment.MicrometerProcessor;
 import dev.ebullient.micrometer.deployment.MicrometerRegistryProviderBuildItem;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
+import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
 import dev.ebullient.micrometer.runtime.export.JmxMeterRegistryProvider;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.pkg.steps.NativeBuild;
-import io.quarkus.runtime.annotations.ConfigItem;
-import io.quarkus.runtime.annotations.ConfigPhase;
-import io.quarkus.runtime.annotations.ConfigRoot;
 
 /**
  * Add support for the Jmx Meter Registry. Note that the registry may not
@@ -30,33 +25,11 @@ public class JmxRegistryProcessor {
     static final String REGISTRY_CLASS_NAME = "io.micrometer.jmx.JmxMeterRegistry";
     static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
-    @ConfigRoot(name = "micrometer.export.jmx", phase = ConfigPhase.BUILD_TIME)
-    static class JmxBuildTimeConfig {
-        /**
-         * If the Jmx micrometer registry is enabled.
-         */
-        @ConfigItem
-        Optional<Boolean> enabled;
-
-        @Override
-        public String toString() {
-            return this.getClass().getSimpleName()
-                    + "{enabled=" + enabled
-                    + '}';
-        }
-    }
-
     static class JmxEnabled implements BooleanSupplier {
-        MicrometerBuildTimeConfig mConfig;
-        JmxBuildTimeConfig config;
+        MicrometerConfig mConfig;
 
         public boolean getAsBoolean() {
-            boolean enabled = false;
-            // TODO: Can't yet check for classes on the classpath in supplier
-            //if (MicrometerProcessor.isInClasspath(REGISTRY_CLASS_NAME)) {
-            enabled = mConfig.checkEnabledWithDefault(config.enabled);
-            //}
-            return enabled;
+            return REGISTRY_CLASS != null && mConfig.checkRegistryEnabledWithDefault(mConfig.export.jmx);
         }
     }
 
@@ -70,12 +43,6 @@ public class JmxRegistryProcessor {
     @BuildStep(onlyIf = JmxEnabled.class, onlyIfNot = NativeBuild.class, loadsApplicationClasses = true)
     MicrometerRegistryProviderBuildItem createJmxRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
-
-        // TODO: remove this when the onlyIf check can do this
-        // Double check that Jmx registry is on the classpath
-        if (!MicrometerProcessor.isInClasspath(REGISTRY_CLASS_NAME)) {
-            return null;
-        }
 
         // Add the Jmx Registry Producer
         additionalBeans.produce(AdditionalBeanBuildItem.builder()

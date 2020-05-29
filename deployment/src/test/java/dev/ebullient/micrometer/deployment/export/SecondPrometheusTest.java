@@ -18,6 +18,7 @@ public class SecondPrometheusTest {
             .withConfigurationResource("test-logging.properties")
             .overrideConfigKey("quarkus.micrometer.export.prometheus.enabled", "true")
             .overrideConfigKey("quarkus.micrometer.registry-enabled-default", "false")
+            .overrideConfigKey("quarkus.micrometer.binder-enabled-default", "false")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClass(PrometheusRegistryProcessor.REGISTRY_CLASS)
                     .addClass(SecondPrometheusProvider.class));

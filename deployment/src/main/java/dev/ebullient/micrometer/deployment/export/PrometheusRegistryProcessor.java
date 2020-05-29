@@ -1,14 +1,13 @@
 package dev.ebullient.micrometer.deployment.export;
 
-import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.deployment.MicrometerBuildTimeConfig;
-import dev.ebullient.micrometer.deployment.MicrometerProcessor;
 import dev.ebullient.micrometer.deployment.MicrometerRegistryProviderBuildItem;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
+import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
+import dev.ebullient.micrometer.runtime.config.PrometheusConfig;
 import dev.ebullient.micrometer.runtime.export.PrometheusMeterRegistryProvider;
 import dev.ebullient.micrometer.runtime.export.PrometheusRecorder;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
@@ -17,9 +16,6 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
-import io.quarkus.runtime.annotations.ConfigItem;
-import io.quarkus.runtime.annotations.ConfigPhase;
-import io.quarkus.runtime.annotations.ConfigRoot;
 import io.quarkus.vertx.http.deployment.HttpRootPathBuildItem;
 import io.quarkus.vertx.http.deployment.RouteBuildItem;
 import io.vertx.core.Handler;
@@ -36,52 +32,17 @@ public class PrometheusRegistryProcessor {
     static final String REGISTRY_CLASS_NAME = "io.micrometer.prometheus.PrometheusMeterRegistry";
     static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
-    @ConfigRoot(name = "micrometer.export.prometheus", phase = ConfigPhase.BUILD_TIME)
-    static class PrometheusBuildTimeConfig {
-        /**
-         * Default path for the prometheus endpoint
-         */
-        @ConfigItem(defaultValue = "/prometheus")
-        String path;
-
-        /**
-         * If the Prometheus micrometer registry is enabled.
-         */
-        @ConfigItem
-        Optional<Boolean> enabled;
-
-        @Override
-        public String toString() {
-            return this.getClass().getSimpleName()
-                    + "{path='" + path
-                    + ",enabled=" + enabled
-                    + '}';
-        }
-    }
-
     static class PrometheusEnabled implements BooleanSupplier {
-        MicrometerBuildTimeConfig mConfig;
-        PrometheusBuildTimeConfig pConfig;
+        MicrometerConfig mConfig;
 
         public boolean getAsBoolean() {
-            boolean enabled = false;
-            // TODO: Can't yet check for classes on the classpath in supplier
-            //if (MicrometerProcessor.isInClasspath(REGISTRY_CLASS_NAME)) {
-            enabled = mConfig.checkEnabledWithDefault(pConfig.enabled);
-            //}
-            return enabled;
+            return REGISTRY_CLASS != null && mConfig.checkRegistryEnabledWithDefault(mConfig.export.prometheus);
         }
     }
 
     @BuildStep(onlyIf = PrometheusEnabled.class, loadsApplicationClasses = true)
     MicrometerRegistryProviderBuildItem createPrometheusRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
-
-        // TODO: remove this when the onlyIf check can do this
-        // Double check that Prometheus registry is on the classpath
-        if (!MicrometerProcessor.isInClasspath(REGISTRY_CLASS_NAME)) {
-            return null;
-        }
 
         // Add the Prometheus Registry Producer
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
@@ -96,15 +57,10 @@ public class PrometheusRegistryProcessor {
     @Record(ExecutionTime.RUNTIME_INIT)
     void createPrometheusRoute(BuildProducer<RouteBuildItem> routes,
             HttpRootPathBuildItem httpRoot,
-            PrometheusBuildTimeConfig pConfig,
+            MicrometerConfig mConfig,
             PrometheusRecorder recorder) {
 
-        // TODO: remove this when the onlyIf check can do this
-        // Double check that Prometheus registry is on the classpath
-        if (!MicrometerProcessor.isInClasspath(REGISTRY_CLASS_NAME)) {
-            return;
-        }
-
+        PrometheusConfig pConfig = mConfig.export.prometheus;
         log.debug("PROMETHEUS CONFIG: " + pConfig);
         // set up prometheus scrape endpoint
         Handler<RoutingContext> handler = recorder.createPrometheusScrapeHandler();

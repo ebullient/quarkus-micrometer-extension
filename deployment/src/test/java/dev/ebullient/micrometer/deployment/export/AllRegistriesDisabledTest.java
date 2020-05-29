@@ -21,6 +21,7 @@ public class AllRegistriesDisabledTest {
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
             .withConfigurationResource("test-logging.properties")
+            .overrideConfigKey("quarkus.micrometer.binder-enabled-default", "false")
             .overrideConfigKey("quarkus.micrometer.export.datadog.enabled", "false")
             .overrideConfigKey("quarkus.micrometer.export.jmx.enabled", "false")
             .overrideConfigKey("quarkus.micrometer.export.prometheus.enabled", "false")
