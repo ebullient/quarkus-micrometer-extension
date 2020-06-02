@@ -60,6 +60,13 @@
       <artifactId>micrometer-core</artifactId>
     </dependency>
 
+    <!-- Dependencies for Binding (optional) -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-orm</artifactId>
+      <optional>true</optional>
+    </dependency>
+
     <!-- Registry providers (optional) -->
 
     <dependency>

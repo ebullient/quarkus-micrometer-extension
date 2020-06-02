@@ -58,6 +58,20 @@ class PrometheusMetricsRegistryTest {
     }
 
     @Test
+    @Order(4)
+    void testPanacheCalls() {
+        given()
+                .when().get("/fruit/create")
+                .then()
+                .statusCode(204);
+
+        given()
+                .when().get("/fruit/all")
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
     @Order(10)
     void testPrometheusScrapeEndpoint() {
         given()
@@ -84,6 +98,18 @@ class PrometheusMetricsRegistryTest {
                 .body(containsString("uri=\"/message\""))
                 .body(containsString("uri=\"/message/item/{id}\""))
                 .body(containsString("outcome=\"SUCCESS\""))
+
+                // Verify Hibernate Metrics
+                .body(containsString(
+                        "hibernate_sessions_open_total{entityManagerFactory=\"default\",env=\"test\",registry=\"prometheus\",} 2.0"))
+                .body(containsString(
+                        "hibernate_sessions_closed_total{entityManagerFactory=\"default\",env=\"test\",registry=\"prometheus\",} 2.0"))
+                .body(containsString(
+                        "hibernate_connections_obtained_total{entityManagerFactory=\"default\",env=\"test\",registry=\"prometheus\",}"))
+                .body(containsString(
+                        "hibernate_entities_inserts_total{entityManagerFactory=\"default\",env=\"test\",registry=\"prometheus\",} 3.0"))
+                .body(containsString(
+                        "hibernate_flushes_total{entityManagerFactory=\"default\",env=\"test\",registry=\"prometheus\",} 2.0"))
 
                 // this was defined by a tag to a non-matching registry, and should not be found
                 .body(not(containsString("class-should-not-match")));
