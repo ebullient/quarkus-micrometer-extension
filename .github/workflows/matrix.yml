@@ -7,7 +7,7 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, experimental ]
 
 jobs:
   build:
@@ -15,8 +15,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ 11 ]
-        graal: [ 19.3.1, 20.0.0 ]
+        java: [ 8, 11 ]
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/cache@v1
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Install JDK ${{ matrix.java }}
+      uses: actions/setup-java@v1
+      with:
+        java-version: ${{ matrix.java }}
+
+    - name: Build with Maven
+      run: |
+        ./mvnw -B --no-transfer-progress help:evaluate -Dexpression=project.version | grep -v INFO
+        ./mvnw -B --no-transfer-progress clean verify -Dformat.skip
+
+  native:
+    needs: build
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 8 ]
+        graal: [ 19.3.1 ]
 
     steps:
     - uses: actions/checkout@v2
@@ -35,14 +62,6 @@ jobs:
     - name: Pull Quarkus Native Builder Image ${{ matrix.graal }}-java${{ matrix.java }}
       run: docker pull quay.io/quarkus/ubi-quarkus-native-image:${{ matrix.graal }}-java${{ matrix.java }}
 
-    - name: Build with Maven
-      run: |
-        ./mvnw -B --no-transfer-progress help:evaluate -Dexpression=project.version | grep -v INFO
-        ./mvnw -B --no-transfer-progress clean verify
-
     - name: Native Quarkus build with maven
-      if: success()
       run: |
-        ./mvnw -B --no-transfer-progress clean verify -Dnative -Dquarkus.native.container-build=true -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-native-image:${{ matrix.graal }}-java${{ matrix.java }}
-
-
+        ./mvnw -B --no-transfer-progress clean verify -Dformat.skip -Dnative -Dquarkus.native.native-image-xmx=3g -Dquarkus.native.container-build=true -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-native-image:${{ matrix.graal }}-java${{ matrix.java }}

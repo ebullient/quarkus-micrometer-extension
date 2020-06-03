@@ -8,6 +8,8 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -18,6 +20,7 @@ import io.vertx.core.http.HttpServerResponse;
 /**
  * Test tag creation
  */
+@DisabledOnJre(JRE.JAVA_8)
 public class VertxMetricsTagsTest {
 
     @Mock
