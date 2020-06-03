@@ -1,5 +1,7 @@
 package dev.ebullient.micrometer.runtime.binder;
 
+import java.util.Set;
+
 import javax.annotation.Priority;
 import javax.enterprise.context.Dependent;
 import javax.enterprise.event.Observes;
@@ -26,7 +28,9 @@ public class HibernateMetricsProvider {
     void onApplicationStart(@Observes @Priority(javax.interceptor.Interceptor.Priority.LIBRARY_BEFORE) StartupEvent event) {
         if (!jpaConfigInstance.isUnsatisfied()) {
             JPAConfig jpaConfig = jpaConfigInstance.get();
-            for (String puName : jpaConfig.getPersistenceUnits()) {
+            //TODO Switch to the below for loop when https://github.com/quarkusio/quarkus/pull/9723 is released
+            //            for (String puName : jpaConfig.getPersistenceUnits()) {
+            for (String puName : Set.of("default")) {
                 SessionFactory sessionFactory = jpaConfig.getEntityManagerFactory(puName).unwrap(SessionFactory.class);
                 if (sessionFactory != null) {
                     // Configure HibernateMetrics
