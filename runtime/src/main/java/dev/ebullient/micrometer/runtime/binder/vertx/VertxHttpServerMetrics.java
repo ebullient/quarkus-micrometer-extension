@@ -83,9 +83,13 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
     @Override
     public void disconnected(Context socketMetric, SocketAddress remoteAddress) {
         log.debugf("Disconnected %s", socketMetric);
-        LongTaskTimer.Sample sample = (LongTaskTimer.Sample) socketMetric.get(METER_HTTP_SOCKET_METRIC);
-        sample.stop();
-        cleanUp(socketMetric);
+        if (socketMetric != null) {
+            LongTaskTimer.Sample sample = (LongTaskTimer.Sample) socketMetric.get(METER_HTTP_SOCKET_METRIC);
+            if ( sample != null ) {
+                sample.stop();
+            }
+            cleanUp(socketMetric);
+        }
     }
 
     /**
