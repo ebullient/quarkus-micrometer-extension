@@ -112,6 +112,9 @@ class PrometheusMetricsRegistryTest {
                         "hibernate_flushes_total{entityManagerFactory=\"default\",env=\"test\",registry=\"prometheus\",} 2.0"))
 
                 // this was defined by a tag to a non-matching registry, and should not be found
-                .body(not(containsString("class-should-not-match")));
+                .body(not(containsString("class-should-not-match")))
+
+                // should not find this ignored uri
+                .body(not(containsString("uri=\"/fruit/create\"")));
     }
 }
