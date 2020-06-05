@@ -42,8 +42,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ 8 ]
-        graal: [ 19.3.1 ]
+        java: [ 8, 11 ]
+        graal: [ 19.3.1, 20.0.0 ]
 
     steps:
     - uses: actions/checkout@v2
