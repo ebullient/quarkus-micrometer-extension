@@ -6,14 +6,15 @@ import javax.interceptor.Interceptor;
 
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderAdapter;
+import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderContainerFilter;
 import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderRecorder;
+import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterFilter;
 import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
+import dev.ebullient.micrometer.runtime.config.runtime.VertxConfig;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
-import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.resteasy.common.spi.ResteasyJaxrsProviderBuildItem;
 import io.quarkus.vertx.core.deployment.VertxOptionsConsumerBuildItem;
 import io.quarkus.vertx.http.deployment.FilterBuildItem;
@@ -32,31 +33,33 @@ public class VertxBinderProcessor {
     }
 
     @BuildStep(onlyIf = VertxBinderEnabled.class)
-    void createVertxAdapters(CombinedIndexBuildItem index,
-            BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
-
+    AdditionalBeanBuildItem createVertxAdapters() {
         // Add Vertx meter adapters
-        additionalBeans.produce(AdditionalBeanBuildItem.builder()
+        return AdditionalBeanBuildItem.builder()
                 .addBeanClass(VertxMeterBinderAdapter.class)
-                .addBeanClass("dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderContainerFilter")
-                .setUnremovable().build());
+                .addBeanClass(VertxMeterBinderContainerFilter.class)
+                .setUnremovable().build();
     }
 
     @BuildStep(onlyIf = VertxBinderEnabled.class)
-    void createVertxFilters(BuildProducer<ResteasyJaxrsProviderBuildItem> jaxRsProviders) {
+    ResteasyJaxrsProviderBuildItem createVertxFilters() {
+        return new ResteasyJaxrsProviderBuildItem(VertxMeterBinderContainerFilter.class.getName());
+    }
 
-        jaxRsProviders.produce(
-                new ResteasyJaxrsProviderBuildItem(
-                        "dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderContainerFilter"));
+    @BuildStep(onlyIf = VertxBinderEnabled.class)
+    FilterBuildItem addVertxMeterFilter() {
+        return new FilterBuildItem(new VertxMeterFilter(), 10);
+    }
+
+    @BuildStep(onlyIf = VertxBinderEnabled.class)
+    @Record(value = ExecutionTime.STATIC_INIT)
+    VertxOptionsConsumerBuildItem build(VertxMeterBinderRecorder recorder) {
+        return new VertxOptionsConsumerBuildItem(recorder.configureMetricsAdapter(), Interceptor.Priority.LIBRARY_AFTER);
     }
 
     @BuildStep(onlyIf = VertxBinderEnabled.class)
     @Record(value = ExecutionTime.RUNTIME_INIT)
-    VertxOptionsConsumerBuildItem build(VertxMeterBinderRecorder recorder,
-            BuildProducer<FilterBuildItem> filterBuildItemBuildProducer) {
-
-        filterBuildItemBuildProducer.produce(new FilterBuildItem(recorder.createRouteFilter(), 10));
-
-        return new VertxOptionsConsumerBuildItem(recorder.configureMetricsAdapter(), Interceptor.Priority.LIBRARY_AFTER);
+    void setVertxConfig(VertxMeterBinderRecorder recorder, VertxConfig config) {
+        recorder.setVertxConfig(config);
     }
 }

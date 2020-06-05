@@ -26,7 +26,8 @@ public class DatadogEnabledInvalidTest {
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClass(DatadogRegistryProcessor.REGISTRY_CLASS))
             .assertException(t -> {
-                Assertions.assertEquals(ValidationException.class.getName(), t.getClass().getName());
+                Throwable underlyingError = ((ExceptionInInitializerError) t).getException().getCause();
+                Assertions.assertEquals(ValidationException.class.getName(), underlyingError.getClass().getName());
             });
 
     @Inject

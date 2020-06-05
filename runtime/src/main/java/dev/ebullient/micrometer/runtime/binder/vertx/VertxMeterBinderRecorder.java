@@ -2,16 +2,12 @@ package dev.ebullient.micrometer.runtime.binder.vertx;
 
 import java.util.function.Consumer;
 
-import javax.enterprise.inject.spi.CDI;
-
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.runtime.config.runtime.VertxConfig;
+import io.quarkus.arc.Arc;
 import io.quarkus.runtime.annotations.Recorder;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.ext.web.RoutingContext;
 
 @Recorder
 public class VertxMeterBinderRecorder {
@@ -22,31 +18,14 @@ public class VertxMeterBinderRecorder {
             @Override
             public void accept(VertxOptions vertxOptions) {
                 log.debug("Adding Micrometer MeterBinder to VertxOptions");
-                VertxMeterBinderAdapter binder = CDI.current().select(VertxMeterBinderAdapter.class).get();
+                VertxMeterBinderAdapter binder = Arc.container().instance(VertxMeterBinderAdapter.class).get();
                 vertxOptions.setMetricsOptions(binder);
             }
         };
     }
 
-    public Handler<RoutingContext> createRouteFilter() {
-        return new Handler<RoutingContext>() {
-
-            @Override
-            public void handle(final RoutingContext event) {
-                final Context context = Vertx.currentContext();
-                log.debugf("Handling event %s with context %s", event, context);
-
-                context.put(VertxHttpServerMetrics.METER_ROUTING_CONTEXT, event);
-                event.addBodyEndHandler(new Handler<Void>() {
-                    @Override
-                    public void handle(Void x) {
-                        context.remove(VertxHttpServerMetrics.METER_ROUTING_CONTEXT);
-                    }
-                });
-
-                event.next();
-            }
-
-        };
+    public void setVertxConfig(VertxConfig config) {
+        VertxMeterBinderAdapter binder = Arc.container().instance(VertxMeterBinderAdapter.class).get();
+        binder.setVertxConfig(config);
     }
 }
