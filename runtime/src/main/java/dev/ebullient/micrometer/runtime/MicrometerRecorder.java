@@ -15,6 +15,7 @@ import org.jboss.logging.Logger;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.binder.MeterBinder;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.arc.Arc;
@@ -38,6 +39,8 @@ public class MicrometerRecorder {
                 Instance<MeterRegistry> allRegistries = Arc.container().beanManager().createInstance()
                         .select(MeterRegistry.class, Any.Literal.INSTANCE);
                 final MeterRegistry rootRegistry = allRegistries.get();
+                MicrometerLateBinding lateBinding = Arc.container().instance(MicrometerLateBinding.class, Any.Literal.INSTANCE)
+                        .get();
 
                 // Filters to change/constrain construction/output of metrics
                 // Customize registries by class or type
@@ -80,8 +83,10 @@ public class MicrometerRecorder {
                 // Binders must be last, apply to "top-level" registry
                 Instance<MeterBinder> allBinders = Arc.container().beanManager().createInstance().select(MeterBinder.class,
                         Any.Literal.INSTANCE);
-                for (Iterator<MeterBinder> binders = allBinders.iterator(); binders.hasNext();) {
-                    binders.next().bindTo(rootRegistry);
+                for (MeterBinder binder : allBinders) {
+                    if (!isLateBinding(binder, lateBinding)) {
+                        binder.bindTo(rootRegistry);
+                    }
                 }
 
                 // Add the current CDI root registry to the global composite
@@ -100,6 +105,15 @@ public class MicrometerRecorder {
                 });
             }
         };
+    }
+
+    private boolean isLateBinding(MeterBinder binder, MicrometerLateBinding lateBindingHelper) {
+        // Exclude JVM Classloader metrics from static init as the number of classes differs
+        if (ClassLoaderMetrics.class.isAssignableFrom(binder.getClass())) {
+            lateBindingHelper.addLateBinding(binder);
+            return true;
+        }
+        return false;
     }
 
     public static Map<String, String> captureProperties(Config config, String prefix) {
