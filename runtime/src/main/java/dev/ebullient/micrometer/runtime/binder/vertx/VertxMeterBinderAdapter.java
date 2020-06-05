@@ -1,10 +1,6 @@
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Pattern;
 
 import javax.inject.Singleton;
 
@@ -13,6 +9,7 @@ import org.jboss.logging.Logger;
 import dev.ebullient.micrometer.runtime.config.runtime.VertxConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
+import io.micrometer.core.lang.NonNull;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.metrics.MetricsOptions;
@@ -25,26 +22,20 @@ import io.vertx.core.spi.metrics.VertxMetrics;
 public class VertxMeterBinderAdapter extends MetricsOptions implements MeterBinder, VertxMetricsFactory, VertxMetrics {
     private static final Logger log = Logger.getLogger(VertxMeterBinderAdapter.class);
 
-    final AtomicReference<MetricsBinder> vertxMetricsBinder = new AtomicReference<>();
+    final AtomicReference<MeterRegistry> meterRegistry = new AtomicReference<>();
 
-    final List<Pattern> ignorePatterns;
+    private VertxConfig config;
 
-    public VertxMeterBinderAdapter(VertxConfig config) {
-        if (config.ignorePatterns.isPresent()) {
-            List<String> stringPatterns = config.ignorePatterns.get();
-            ignorePatterns = new ArrayList<>(stringPatterns.size());
-            for (String s : stringPatterns) {
-                ignorePatterns.add(Pattern.compile(s));
-            }
-        } else {
-            ignorePatterns = Collections.emptyList();
-        }
+    public VertxMeterBinderAdapter() {
     }
 
     @Override
-    public void bindTo(MeterRegistry registry) {
-        log.debugf("Bind registry %s to Vertx Metrics", registry);
-        vertxMetricsBinder.set(new MetricsBinder(registry, this));
+    public void bindTo(@NonNull MeterRegistry registry) {
+        meterRegistry.set(registry);
+    }
+
+    public void setVertxConfig(VertxConfig config) {
+        this.config = config;
     }
 
     @Override
@@ -70,28 +61,14 @@ public class VertxMeterBinderAdapter extends MetricsOptions implements MeterBind
     @Override
     public HttpServerMetrics<?, ?, ?> createHttpServerMetrics(HttpServerOptions options, SocketAddress localAddress) {
         log.debugf("Create HttpServerMetrics with options %s and address %s", options, localAddress);
-        MetricsBinder binder = vertxMetricsBinder.get();
-        if (binder == null) {
+        log.debugf("Bind registry %s to Vertx Metrics", meterRegistry.get());
+        MeterRegistry registry = meterRegistry.get();
+        if (registry == null) {
             throw new IllegalStateException("MeterRegistry was not resolved");
         }
-        return new VertxHttpServerMetrics(binder);
-    }
-
-    static class MetricsBinder {
-        final MeterRegistry registry;
-        final VertxMeterBinderAdapter meterBinder;
-
-        MetricsBinder(MeterRegistry registry, VertxMeterBinderAdapter meterBinder) {
-            this.registry = registry;
-            this.meterBinder = meterBinder;
+        if (config == null) {
+            throw new IllegalStateException("VertxConfig was not found");
         }
-
-        List<Pattern> getIgnorePatterns() {
-            return meterBinder.ignorePatterns;
-        }
-
-        public List<Pattern> getMatchPatterns() {
-            return Collections.emptyList();
-        }
+        return new VertxHttpServerMetrics(registry, config);
     }
 }

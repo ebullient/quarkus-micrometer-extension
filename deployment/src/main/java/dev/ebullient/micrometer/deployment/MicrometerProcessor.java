@@ -27,6 +27,7 @@ import io.micrometer.core.instrument.binder.MeterBinder;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.arc.deployment.BeanContainerListenerBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.arc.processor.DotNames;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -142,8 +143,8 @@ public class MicrometerProcessor {
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
-    @Record(ExecutionTime.RUNTIME_INIT)
-    void configureRegistry(MicrometerRecorder recorder,
+    @Record(ExecutionTime.STATIC_INIT)
+    BeanContainerListenerBuildItem configureRegistry(MicrometerRecorder recorder,
             List<MicrometerRegistryProviderBuildItem> providerClassItems,
             ShutdownContextBuildItem shutdownContextBuildItem) {
 
@@ -151,10 +152,6 @@ public class MicrometerProcessor {
         for (MicrometerRegistryProviderBuildItem item : providerClassItems) {
             typeClasses.add(item.getRegistryClass());
         }
-        recorder.configureRegistry(typeClasses, shutdownContextBuildItem);
-    }
-
-    public static boolean isInClasspath(String classname) {
-        return MicrometerRecorder.getClassForName(classname) != null;
+        return new BeanContainerListenerBuildItem(recorder.configureRegistry(typeClasses, shutdownContextBuildItem));
     }
 }

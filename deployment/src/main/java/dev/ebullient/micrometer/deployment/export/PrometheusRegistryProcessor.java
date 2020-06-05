@@ -9,17 +9,12 @@ import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
 import dev.ebullient.micrometer.runtime.config.PrometheusConfig;
 import dev.ebullient.micrometer.runtime.export.PrometheusMeterRegistryProvider;
-import dev.ebullient.micrometer.runtime.export.PrometheusRecorder;
+import dev.ebullient.micrometer.runtime.export.handlers.PrometheusHandler;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
-import io.quarkus.deployment.annotations.ExecutionTime;
-import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
-import io.quarkus.vertx.http.deployment.HttpRootPathBuildItem;
 import io.quarkus.vertx.http.deployment.RouteBuildItem;
-import io.vertx.core.Handler;
-import io.vertx.ext.web.RoutingContext;
 
 /**
  * Add support for the Promethus Meter Registry. Note that the registry may not
@@ -53,23 +48,18 @@ public class PrometheusRegistryProcessor {
         return new MicrometerRegistryProviderBuildItem(REGISTRY_CLASS);
     }
 
-    @BuildStep(onlyIf = PrometheusEnabled.class, loadsApplicationClasses = true)
-    @Record(ExecutionTime.RUNTIME_INIT)
+    @BuildStep(onlyIf = PrometheusEnabled.class)
     void createPrometheusRoute(BuildProducer<RouteBuildItem> routes,
-            HttpRootPathBuildItem httpRoot,
-            MicrometerConfig mConfig,
-            PrometheusRecorder recorder) {
+            MicrometerConfig mConfig) {
 
         PrometheusConfig pConfig = mConfig.export.prometheus;
         log.debug("PROMETHEUS CONFIG: " + pConfig);
-        // set up prometheus scrape endpoint
-        Handler<RoutingContext> handler = recorder.createPrometheusScrapeHandler();
 
         // Exact match for resources matched to the root path
-        routes.produce(new RouteBuildItem(pConfig.path, handler));
+        routes.produce(new RouteBuildItem(pConfig.path, new PrometheusHandler()));
 
         // Match paths that begin with the deployment path
         String matchPath = pConfig.path + (pConfig.path.endsWith("/") ? "*" : "/*");
-        routes.produce(new RouteBuildItem(matchPath, handler));
+        routes.produce(new RouteBuildItem(matchPath, new PrometheusHandler()));
     }
 }

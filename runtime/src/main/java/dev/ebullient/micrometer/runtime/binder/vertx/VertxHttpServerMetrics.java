@@ -13,13 +13,19 @@
  */
 package dev.ebullient.micrometer.runtime.binder.vertx;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.regex.Pattern;
+
 import javax.annotation.Nullable;
 
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderAdapter.MetricsBinder;
+import dev.ebullient.micrometer.runtime.config.runtime.VertxConfig;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.LongTaskTimer;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import io.vertx.core.Context;
@@ -40,10 +46,32 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
     static final String METER_HTTP_REQUEST_SAMPLE = "METER_HTTP_REQUEST_SAMPLE";
     static final String METER_ROUTING_CONTEXT = "METER_ROUTING_CONTEXT";
 
-    final MetricsBinder binder;
+    final MeterRegistry registry;
+    final List<Pattern> ignorePatterns;
+    final List<Pattern> matchPatterns;
 
-    public VertxHttpServerMetrics(MetricsBinder binder) {
-        this.binder = binder;
+    public VertxHttpServerMetrics(MeterRegistry registry, VertxConfig config) {
+        this.registry = registry;
+
+        if (config.ignorePatterns.isPresent()) {
+            List<String> stringPatterns = config.ignorePatterns.get();
+            ignorePatterns = new ArrayList<>(stringPatterns.size());
+            for (String s : stringPatterns) {
+                ignorePatterns.add(Pattern.compile(s));
+            }
+        } else {
+            ignorePatterns = Collections.emptyList();
+        }
+
+        if (config.matchPatterns.isPresent()) {
+            List<String> stringPatterns = config.matchPatterns.get();
+            matchPatterns = new ArrayList<>(stringPatterns.size());
+            for (String s : stringPatterns) {
+                matchPatterns.add(Pattern.compile(s));
+            }
+        } else {
+            matchPatterns = Collections.emptyList();
+        }
     }
 
     private void cleanUp(Context source) {
@@ -69,7 +97,7 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
     public Context connected(SocketAddress remoteAddress, String remoteName) {
         Context context = getCurrentContext("connected");
         context.put(METER_HTTP_SOCKET_METRIC,
-                LongTaskTimer.builder("http.server.connections").register(binder.registry).start());
+                LongTaskTimer.builder("http.server.connections").register(registry).start());
         return context;
     }
 
@@ -85,7 +113,7 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
         log.debugf("Disconnected %s", socketMetric);
         if (socketMetric != null) {
             LongTaskTimer.Sample sample = (LongTaskTimer.Sample) socketMetric.get(METER_HTTP_SOCKET_METRIC);
-            if ( sample != null ) {
+            if (sample != null) {
                 sample.stop();
             }
             cleanUp(socketMetric);
@@ -101,7 +129,7 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public void bytesRead(Context socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
-        DistributionSummary.builder("http.server.bytes.read").register(binder.registry).record(numberOfBytes);
+        DistributionSummary.builder("http.server.bytes.read").register(registry).record(numberOfBytes);
     }
 
     /**
@@ -113,7 +141,7 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public void bytesWritten(Context socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
-        DistributionSummary.builder("http.server.bytes.written").register(binder.registry).record(numberOfBytes);
+        DistributionSummary.builder("http.server.bytes.written").register(registry).record(numberOfBytes);
     }
 
     /**
@@ -126,7 +154,7 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public void exceptionOccurred(Context socketMetric, SocketAddress remoteAddress, Throwable t) {
-        binder.registry.counter("http.server.errors", "class", t.getClass().getName()).increment();
+        registry.counter("http.server.errors", "class", t.getClass().getName()).increment();
     }
 
     /**
@@ -140,10 +168,9 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public Context responsePushed(Context socketMetric, HttpMethod method, String uri, HttpServerResponse response) {
-        String path = VertxMetricsTags.parseUriPath(this.binder.getMatchPatterns(), this.binder.getIgnorePatterns(),
-                uri);
+        String path = VertxMetricsTags.parseUriPath(matchPatterns, ignorePatterns, uri);
         if (path != null) {
-            binder.registry.counter("http.server.push",
+            registry.counter("http.server.push",
                     Tags.of(VertxMetricsTags.uri(path, response), VertxMetricsTags.method(method),
                             VertxMetricsTags.outcome(response), VertxMetricsTags.status(response)))
                     .increment();
@@ -162,12 +189,11 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      */
     @Override
     public Context requestBegin(Context socketMetric, HttpServerRequest request) {
-        String path = VertxMetricsTags.parseUriPath(binder.getMatchPatterns(), binder.getIgnorePatterns(),
-                request.uri());
+        String path = VertxMetricsTags.parseUriPath(matchPatterns, ignorePatterns, request.uri());
         if (path != null) {
             // Pre-add the request method tag to the sample
             socketMetric.put(METER_HTTP_REQUEST_SAMPLE,
-                    Timer.start(binder.registry).tags(Tags.of(VertxMetricsTags.method(request.method()))));
+                    Timer.start(registry).tags(Tags.of(VertxMetricsTags.method(request.method()))));
 
             // remember the path to monitor for use later (maybe a 404 or redirect..)
             socketMetric.put(METER_HTTP_REQUEST_PATH, path);
@@ -186,7 +212,7 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
         Timer.Sample sample = requestMetric.get(METER_HTTP_REQUEST_SAMPLE);
         if (sample != null) {
             String requestPath = getRequestPath("requestReset", requestMetric);
-            sample.stop(binder.registry,
+            sample.stop(registry,
                     Timer.builder("http.server.requests").tags(Tags.of(VertxMetricsTags.uri(requestPath, null),
                             VertxMetricsTags.OUTCOME_CLIENT_ERROR, VertxMetricsTags.STATUS_RESET)));
         }
@@ -204,7 +230,7 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
         if (sample != null) {
             String requestPath = getRequestPath("responseEnd", requestMetric);
 
-            sample.stop(binder.registry, Timer.builder("http.server.requests")
+            sample.stop(registry, Timer.builder("http.server.requests")
                     .tags(Tags.of(
                             VertxMetricsTags.uri(requestPath, response),
                             VertxMetricsTags.outcome(response),
@@ -226,7 +252,7 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
         String path = getRequestPath("connected", socketMetric);
         if (path != null) {
             return LongTaskTimer.builder("http.server.websocket.connections")
-                    .tags(Tags.of(VertxMetricsTags.uri(path, null))).register(binder.registry).start();
+                    .tags(Tags.of(VertxMetricsTags.uri(path, null))).register(registry).start();
         }
         return null;
     }
