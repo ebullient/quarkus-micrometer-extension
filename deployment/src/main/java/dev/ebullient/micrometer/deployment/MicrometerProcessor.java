@@ -132,6 +132,7 @@ public class MicrometerProcessor {
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.RUNTIME_INIT)
+    // BeanContainerBuildItem is a marker to indicate we don't want this run until Arc is ready
     void configureRegistry(MicrometerRecorder recorder,
             List<MicrometerRegistryProviderBuildItem> providerClassItems,
             ShutdownContextBuildItem shutdownContextBuildItem,
