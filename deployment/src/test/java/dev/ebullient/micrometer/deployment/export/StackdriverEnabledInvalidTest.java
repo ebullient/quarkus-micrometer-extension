@@ -26,8 +26,7 @@ public class StackdriverEnabledInvalidTest {
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClass(StackdriverRegistryProcessor.REGISTRY_CLASS))
             .assertException(t -> {
-                Throwable underlyingError = ((ExceptionInInitializerError) t).getException().getCause();
-                Assertions.assertEquals(ValidationException.class.getName(), underlyingError.getClass().getName());
+                Assertions.assertEquals(ValidationException.class.getName(), t.getClass().getName());
             });
 
     @Inject

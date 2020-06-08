@@ -40,7 +40,7 @@ public class JmxRegistryProcessor {
     }
 
     /** Jmx does not work with GraalVM */
-    @BuildStep(onlyIf = JmxEnabled.class, onlyIfNot = NativeBuild.class, loadsApplicationClasses = true)
+    @BuildStep(onlyIf = JmxEnabled.class, onlyIfNot = NativeBuild.class)
     MicrometerRegistryProviderBuildItem createJmxRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 

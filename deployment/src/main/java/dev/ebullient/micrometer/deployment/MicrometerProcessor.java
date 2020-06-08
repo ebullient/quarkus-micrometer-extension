@@ -18,7 +18,6 @@ import dev.ebullient.micrometer.runtime.ClockProvider;
 import dev.ebullient.micrometer.runtime.CompositeRegistryCreator;
 import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
 import dev.ebullient.micrometer.runtime.MeterFilterConstraints;
-import dev.ebullient.micrometer.runtime.MicrometerLateBinding;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import dev.ebullient.micrometer.runtime.binder.JvmMetricsProvider;
 import dev.ebullient.micrometer.runtime.binder.SystemMetricsProvider;
@@ -28,7 +27,7 @@ import io.micrometer.core.instrument.binder.MeterBinder;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.arc.deployment.BeanContainerListenerBuildItem;
+import io.quarkus.arc.deployment.BeanContainerBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.arc.processor.DotNames;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -37,7 +36,6 @@ import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
-import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 
 public class MicrometerProcessor {
@@ -61,17 +59,6 @@ public class MicrometerProcessor {
         return new FeatureBuildItem(FEATURE);
     }
 
-    // @BuildStep(onlyIf = MicrometerEnabled.class)
-    // public CapabilityBuildItem capability() {
-    // return new CapabilityBuildItem(Capabilities.METRICS);
-    // }
-
-    @BuildStep(onlyIf = MicrometerEnabled.class)
-    void addMicrometerDependencies(BuildProducer<IndexDependencyBuildItem> indexDependency) {
-        // indexDependency.produce(new IndexDependencyBuildItem("io.micrometer",
-        // "micrometer-core"));
-    }
-
     @BuildStep(onlyIf = MicrometerEnabled.class)
     UnremovableBeanBuildItem registerAdditionalBeans(CombinedIndexBuildItem indexBuildItem,
             BuildProducer<MicrometerRegistryProviderBuildItem> providerClasses,
@@ -86,7 +73,6 @@ public class MicrometerProcessor {
                 .addBeanClass(CompositeRegistryCreator.class)
                 .addBeanClass(MeterFilterConstraint.class)
                 .addBeanClass(MeterFilterConstraints.class)
-                .addBeanClass(MicrometerLateBinding.class)
                 .build());
 
         IndexView index = indexBuildItem.getIndex();
@@ -145,15 +131,16 @@ public class MicrometerProcessor {
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
-    @Record(ExecutionTime.STATIC_INIT)
-    BeanContainerListenerBuildItem configureRegistry(MicrometerRecorder recorder,
+    @Record(ExecutionTime.RUNTIME_INIT)
+    void configureRegistry(MicrometerRecorder recorder,
             List<MicrometerRegistryProviderBuildItem> providerClassItems,
-            ShutdownContextBuildItem shutdownContextBuildItem) {
+            ShutdownContextBuildItem shutdownContextBuildItem,
+            BeanContainerBuildItem beanContainerBuildItem) {
 
         Set<Class<? extends MeterRegistry>> typeClasses = new HashSet<>();
         for (MicrometerRegistryProviderBuildItem item : providerClassItems) {
             typeClasses.add(item.getRegistryClass());
         }
-        return new BeanContainerListenerBuildItem(recorder.configureRegistry(typeClasses, shutdownContextBuildItem));
+        recorder.configureRegistry(typeClasses, shutdownContextBuildItem);
     }
 }
