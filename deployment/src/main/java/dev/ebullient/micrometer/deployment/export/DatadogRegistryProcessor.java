@@ -28,8 +28,7 @@ public class DatadogRegistryProcessor {
         }
     }
 
-    /** Datadog does not work with GraalVM */
-    @BuildStep(onlyIf = DatadogEnabled.class, loadsApplicationClasses = true)
+    @BuildStep(onlyIf = DatadogEnabled.class)
     MicrometerRegistryProviderBuildItem createDatadogRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 

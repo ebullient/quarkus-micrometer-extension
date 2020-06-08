@@ -40,7 +40,7 @@ public class StackdriverRegistryProcessor {
     }
 
     /** Stackdriver does not work with GraalVM */
-    @BuildStep(onlyIf = StackdriverEnabled.class, onlyIfNot = NativeBuild.class, loadsApplicationClasses = true)
+    @BuildStep(onlyIf = StackdriverEnabled.class, onlyIfNot = NativeBuild.class)
     MicrometerRegistryProviderBuildItem createStackdriverRegistry(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
 
