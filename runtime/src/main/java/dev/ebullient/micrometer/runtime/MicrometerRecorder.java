@@ -84,12 +84,10 @@ public class MicrometerRecorder {
         // Customize all registries (global/common tags, e.g.)
         Instance<MeterFilter> generalFilters = Arc.container().beanManager().createInstance().select(MeterFilter.class,
                 Default.Literal.INSTANCE);
-        log.debugf("Configuring all registries. hasFilters=%s", !generalFilters.isUnsatisfied());
+        log.debugf("Configuring root registry filters. hasFilters=%s", !generalFilters.isUnsatisfied());
         if (!generalFilters.isUnsatisfied()) {
-            for (Iterator<? extends MeterRegistry> registries = allRegistries.iterator(); registries.hasNext();) {
-                for (Iterator<MeterFilter> filters = generalFilters.iterator(); filters.hasNext();) {
-                    registries.next().config().meterFilter(filters.next());
-                }
+            for (MeterFilter generalFilter : generalFilters) {
+                quarkusRegistry.config().meterFilter(generalFilter);
             }
         }
 
