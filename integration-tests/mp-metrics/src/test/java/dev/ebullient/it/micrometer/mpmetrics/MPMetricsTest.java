@@ -52,7 +52,8 @@ class MPMetricsTest {
 
                 // Prometheus body has ALL THE THINGS in no particular order
 
-                .body(containsString("dev_ebullient_it_micrometer_mpmetrics_PrimeResource_performedChecks=3"))
+                .body(containsString(
+                        "method_counted{method=\"performedChecks\",class=\"dev.ebullient.it.micrometer.mpmetrics.PrimeResource\"}=3"))
                 .body(containsString("dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar=887"));
     }
 
@@ -76,7 +77,8 @@ class MPMetricsTest {
 
                 // Prometheus body has ALL THE THINGS in no particular order
 
-                .body(containsString("dev_ebullient_it_micrometer_mpmetrics_PrimeResource_performedChecks=4"))
+                .body(containsString(
+                        "method_counted{method=\"performedChecks\",class=\"dev.ebullient.it.micrometer.mpmetrics.PrimeResource\"}=4"))
                 .body(containsString("dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar=887"));
     }
 }

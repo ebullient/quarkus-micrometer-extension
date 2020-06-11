@@ -92,6 +92,7 @@ public final class MicrometerConfig {
     @ConfigGroup
     public static class BinderConfig {
         public VertxConfig vertx;
+        public MicroprofileMetricsConfig mpMetrics;
     }
 
     /** Build / static runtime config for exporters */

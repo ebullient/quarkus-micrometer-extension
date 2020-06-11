@@ -1,5 +1,7 @@
 package dev.ebullient.it.micrometer.mpmetrics;
 
+import java.util.concurrent.atomic.LongAccumulator;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -12,7 +14,8 @@ import org.jboss.resteasy.annotations.jaxrs.PathParam;
 
 @Path("/prime")
 public class PrimeResource {
-    private long highestPrimeSoFar = 2;
+
+    private LongAccumulator highestPrimeSoFar = new LongAccumulator(Long::max, 2);
 
     @GET
     @Path("/{number}")
@@ -22,9 +25,8 @@ public class PrimeResource {
         if (result.length() > 0) {
             return result;
         }
-        if (number > highestPrimeSoFar) {
-            highestPrimeSoFar = number;
-        }
+
+        highestPrimeSoFar.accumulate(number);
         return number + " is prime.";
     }
 
@@ -53,6 +55,6 @@ public class PrimeResource {
 
     @Gauge(name = "highestPrimeNumberSoFar", unit = MetricUnits.NONE, description = "Highest prime number so far.")
     public Long highestPrimeNumberSoFar() {
-        return highestPrimeSoFar;
+        return highestPrimeSoFar.get();
     }
 }
