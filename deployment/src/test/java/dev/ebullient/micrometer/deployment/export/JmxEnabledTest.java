@@ -1,5 +1,7 @@
 package dev.ebullient.micrometer.deployment.export;
 
+import java.util.Set;
+
 import javax.inject.Inject;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -10,6 +12,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.quarkus.test.QuarkusUnitTest;
 
 public class JmxEnabledTest {
@@ -32,6 +35,7 @@ public class JmxEnabledTest {
     public void testMeterRegistryPresent() {
         // Jmx is enabled (alone, all others disabled)
         Assertions.assertNotNull(registry, "A registry should be configured");
-        Assertions.assertTrue(REGISTRY_CLASS.equals(registry.getClass()), "Should be JmxMeterRegistry");
+        Set<MeterRegistry> subRegistries = ((CompositeMeterRegistry) registry).getRegistries();
+        Assertions.assertEquals(REGISTRY_CLASS, subRegistries.iterator().next().getClass(), "Should be JmxMeterRegistry");
     }
 }

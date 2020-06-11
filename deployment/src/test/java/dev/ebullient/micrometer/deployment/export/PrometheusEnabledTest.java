@@ -1,5 +1,7 @@
 package dev.ebullient.micrometer.deployment.export;
 
+import java.util.Set;
+
 import javax.inject.Inject;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.quarkus.test.QuarkusUnitTest;
 
@@ -32,8 +35,10 @@ public class PrometheusEnabledTest {
     public void testMeterRegistryPresent() {
         // Prometheus is enabled (only registry)
         Assertions.assertNotNull(registry, "A registry should be configured");
-        Assertions.assertEquals(PrometheusMeterRegistry.class, registry.getClass(), "Should be PrometheusMeterRegistry");
-        Assertions.assertEquals(registry, promRegistry,
-                "The global/generic MeterRegistry should be the same bean as the PrometheusMeterRegistry");
+        Set<MeterRegistry> subRegistries = ((CompositeMeterRegistry) registry).getRegistries();
+        PrometheusMeterRegistry subPromRegistry = (PrometheusMeterRegistry) subRegistries.iterator().next();
+        Assertions.assertEquals(PrometheusMeterRegistry.class, subPromRegistry.getClass(), "Should be PrometheusMeterRegistry");
+        Assertions.assertEquals(subPromRegistry, promRegistry,
+                "The only MeterRegistry should be the same bean as the PrometheusMeterRegistry");
     }
 }

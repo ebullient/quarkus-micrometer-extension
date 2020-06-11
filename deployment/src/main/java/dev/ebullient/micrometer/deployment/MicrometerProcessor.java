@@ -27,6 +27,7 @@ import io.micrometer.core.instrument.binder.MeterBinder;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.arc.deployment.BeanContainerBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.arc.processor.DotNames;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -130,10 +131,19 @@ public class MicrometerProcessor {
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
+    @Record(ExecutionTime.STATIC_INIT)
+    void createRootRegistry(MicrometerRecorder recorder,
+            BeanContainerBuildItem beanContainerBuildItem) {
+        recorder.createRootRegistry();
+    }
+
+    @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.RUNTIME_INIT)
     void configureRegistry(MicrometerRecorder recorder,
             List<MicrometerRegistryProviderBuildItem> providerClassItems,
-            ShutdownContextBuildItem shutdownContextBuildItem) {
+            ShutdownContextBuildItem shutdownContextBuildItem,
+            BeanContainerBuildItem beanContainerBuildItem) {
+        // BeanContainerBuildItem is only present to indicate we call this after Arc is initialized
 
         Set<Class<? extends MeterRegistry>> typeClasses = new HashSet<>();
         for (MicrometerRegistryProviderBuildItem item : providerClassItems) {
