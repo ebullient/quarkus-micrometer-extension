@@ -160,13 +160,12 @@ public class MicrometerRecorder {
     }
 
     public static Class<?> getClassForName(String classname) {
+        Class<?> clazz = null;
         try {
-            log.debug("getClass: TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname);
-            return Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
+            clazz = Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
         } catch (ClassNotFoundException e) {
-            log.debug("getClass: TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname + ": false");
-            return null;
         }
+        log.debugf("getClass: TCCL: %s ## %s : %s", Thread.currentThread().getContextClassLoader(), classname, (clazz != null));
+        return clazz;
     }
-
 }
