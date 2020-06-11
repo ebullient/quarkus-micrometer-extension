@@ -8,8 +8,6 @@ import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.config.runtime.VertxConfig;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.binder.MeterBinder;
-import io.micrometer.core.lang.NonNull;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.metrics.MetricsOptions;
@@ -19,19 +17,14 @@ import io.vertx.core.spi.metrics.HttpServerMetrics;
 import io.vertx.core.spi.metrics.VertxMetrics;
 
 @Singleton
-public class VertxMeterBinderAdapter extends MetricsOptions implements MeterBinder, VertxMetricsFactory, VertxMetrics {
+public class VertxMeterBinderAdapter extends MetricsOptions implements VertxMetricsFactory, VertxMetrics {
     private static final Logger log = Logger.getLogger(VertxMeterBinderAdapter.class);
 
-    final AtomicReference<MeterRegistry> meterRegistry = new AtomicReference<>();
+    public static AtomicReference<MeterRegistry> meterRegistry = new AtomicReference<>();
 
     private VertxConfig config;
 
     public VertxMeterBinderAdapter() {
-    }
-
-    @Override
-    public void bindTo(@NonNull MeterRegistry registry) {
-        meterRegistry.set(registry);
     }
 
     public void setVertxConfig(VertxConfig config) {

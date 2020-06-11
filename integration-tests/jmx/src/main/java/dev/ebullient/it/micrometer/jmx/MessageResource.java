@@ -9,6 +9,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 
 @Path("/message")
 public class MessageResource {
@@ -22,7 +23,9 @@ public class MessageResource {
 
     @GET
     public String message() {
-        return registry.getClass().getName();
+        CompositeMeterRegistry compositeMeterRegistry = (CompositeMeterRegistry) registry;
+        Set<MeterRegistry> subRegistries = compositeMeterRegistry.getRegistries();
+        return subRegistries.iterator().next().getClass().getName();
     }
 
     @GET

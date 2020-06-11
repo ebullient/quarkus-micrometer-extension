@@ -1,5 +1,7 @@
 package dev.ebullient.micrometer.deployment.export;
 
+import java.util.Set;
+
 import javax.inject.Inject;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -30,6 +32,7 @@ public class SecondPrometheusTest {
     public void testMeterRegistryPresent() {
         // We want a composite that contains both registries.
         Assertions.assertNotNull(registry, "A registry should be configured");
-        Assertions.assertTrue(CompositeMeterRegistry.class.equals(registry.getClass()), "Should be CompositeMeterRegistry");
+        Set<MeterRegistry> subRegistries = ((CompositeMeterRegistry) registry).getRegistries();
+        Assertions.assertEquals(2, subRegistries.size(), "Should be two sub registries");
     }
 }
