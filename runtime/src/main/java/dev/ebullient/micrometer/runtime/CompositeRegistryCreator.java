@@ -24,7 +24,7 @@ import io.quarkus.arc.AlternativePriority;
 public class CompositeRegistryCreator {
     private static final Logger log = Logger.getLogger(CompositeRegistryCreator.class);
 
-    public static CompositeMeterRegistry rootRegistry;
+    private static CompositeMeterRegistry rootRegistry;
 
     @Produces
     @Singleton
@@ -33,4 +33,7 @@ public class CompositeRegistryCreator {
         return rootRegistry;
     }
 
+    public static void setRootRegistry(CompositeMeterRegistry meterRegistry) {
+        rootRegistry = meterRegistry;
+    }
 }

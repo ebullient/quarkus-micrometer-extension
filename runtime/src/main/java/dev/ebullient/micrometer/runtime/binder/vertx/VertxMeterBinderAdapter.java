@@ -20,7 +20,7 @@ import io.vertx.core.spi.metrics.VertxMetrics;
 public class VertxMeterBinderAdapter extends MetricsOptions implements VertxMetricsFactory, VertxMetrics {
     private static final Logger log = Logger.getLogger(VertxMeterBinderAdapter.class);
 
-    public static AtomicReference<MeterRegistry> meterRegistry = new AtomicReference<>();
+    private final static AtomicReference<MeterRegistry> meterRegistryRef = new AtomicReference<>();
 
     private VertxConfig config;
 
@@ -29,6 +29,10 @@ public class VertxMeterBinderAdapter extends MetricsOptions implements VertxMetr
 
     public void setVertxConfig(VertxConfig config) {
         this.config = config;
+    }
+
+    public static void setMeterRegistry(MeterRegistry meterRegistry) {
+        meterRegistryRef.set(meterRegistry);
     }
 
     @Override
@@ -54,8 +58,8 @@ public class VertxMeterBinderAdapter extends MetricsOptions implements VertxMetr
     @Override
     public HttpServerMetrics<?, ?, ?> createHttpServerMetrics(HttpServerOptions options, SocketAddress localAddress) {
         log.debugf("Create HttpServerMetrics with options %s and address %s", options, localAddress);
-        log.debugf("Bind registry %s to Vertx Metrics", meterRegistry.get());
-        MeterRegistry registry = meterRegistry.get();
+        log.debugf("Bind registry %s to Vertx Metrics", meterRegistryRef.get());
+        MeterRegistry registry = meterRegistryRef.get();
         if (registry == null) {
             throw new IllegalStateException("MeterRegistry was not resolved");
         }

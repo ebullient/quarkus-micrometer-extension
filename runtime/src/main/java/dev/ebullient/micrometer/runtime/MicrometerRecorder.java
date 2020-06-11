@@ -37,8 +37,8 @@ public class MicrometerRecorder {
     public void createRootRegistry() {
         Clock clock = Arc.container().beanManager().createInstance().select(Clock.class).get();
         quarkusRegistry = new CompositeMeterRegistry(clock);
-        VertxMeterBinderAdapter.meterRegistry.set(quarkusRegistry);
-        CompositeRegistryCreator.rootRegistry = quarkusRegistry;
+        VertxMeterBinderAdapter.setMeterRegistry(quarkusRegistry);
+        CompositeRegistryCreator.setRootRegistry(quarkusRegistry);
     }
 
     public void configureRegistry(Set<Class<? extends MeterRegistry>> registryClasses,
