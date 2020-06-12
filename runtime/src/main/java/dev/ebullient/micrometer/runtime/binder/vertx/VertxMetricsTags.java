@@ -130,7 +130,6 @@ public class VertxMetricsTags {
 
         // Compare path against "ignore this path" patterns
         for (Pattern p : ignorePatterns) {
-            System.out.println("pattern=" + p.pattern());
             if (p.matcher(path).matches()) {
                 log.debugf("Path %s ignored; matches pattern %s", uri, p.pattern());
                 return null;

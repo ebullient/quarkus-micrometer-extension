@@ -5,16 +5,12 @@ import java.util.Iterator;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
-import org.eclipse.microprofile.metrics.annotation.Counted;
-
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.micrometer.core.lang.NonNull;
 
 public class MicroprofileMetricsBinder implements MeterBinder {
-    @Inject
-    Instance<Counted> allCountedMethods;
 
     @Inject
     Instance<GaugeAdapter> allGaugeAdapters;
@@ -24,7 +20,6 @@ public class MicroprofileMetricsBinder implements MeterBinder {
         // register all annotation-declared gauges
         for (Iterator<GaugeAdapter> gauges = allGaugeAdapters.iterator(); gauges.hasNext();) {
             GaugeAdapter g = gauges.next();
-            System.out.println(g);
 
             // Build and register the gauge
             Gauge.Builder builder = Gauge.builder(g.name(), g::getValue);

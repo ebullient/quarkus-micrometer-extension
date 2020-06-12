@@ -2,58 +2,47 @@ package dev.ebullient.micrometer.deployment.binder.mpmetrics;
 
 import java.util.function.BooleanSupplier;
 
-import io.quarkus.arc.processor.BuiltinScope;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
-import org.jboss.logging.Logger;
+import org.jboss.jandex.IndexView;
 
-import dev.ebullient.micrometer.runtime.MicrometerRecorder;
-import dev.ebullient.micrometer.runtime.binder.microprofile.MicroprofileMetricsBinder;
 import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
+import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
+import io.quarkus.arc.processor.BuiltinScope;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
+import io.quarkus.gizmo.ClassOutput;
 
+/**
+ * The microprofile API must remain optional. Avoid importing classes
+ * that import MP Metrics API classes in turn.
+ */
 public class MicroprofileMetricsProcessor {
 
-    static final DotName METRIC_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Metric");
-    static final Class<?> METRIC_ANNOTATION_CLASS = MicrometerRecorder
-        .getClassForName(METRIC_ANNOTATION.toString());
-
-    static class MicroprofileMetricsEnabled implements BooleanSupplier {
-        MicrometerConfig mConfig;
-
-        public boolean getAsBoolean() {
-            return METRIC_ANNOTATION_CLASS != null && mConfig.checkBinderEnabledWithDefault(mConfig.binder.mpMetrics);
-        }
-    }
+    public static final DotName MP_METRICS_BINDER = DotName
+            .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.MicroprofileMetricsBinder");
 
     // these are needed for determining whether a class is a REST endpoint or JAX-RS provider
     public static final DotName JAXRS_PATH = DotName.createSimple("javax.ws.rs.Path");
     public static final DotName REST_CONTROLLER = DotName
             .createSimple("org.springframework.web.bind.annotation.RestController");
-    public static final DotName JAXRS_PROVIDER = DotName.createSimple("javax.ws.rs.ext.Provider");
-
-    // Annotations
-    static final DotName CONCURRENT_GAUGE_ANNOTATION = DotName
-            .createSimple("org.eclipse.microprofile.metrics.annotation.ConcurrentGauge");
-    static final DotName COUNTED_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Counted");
-    static final DotName GAUGE_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Gauge");
-    static final DotName METERED_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Metered");
-    static final DotName SIMPLY_TIMED_ANNOTATION = DotName
-            .createSimple("org.eclipse.microprofile.metrics.annotation.SimplyTimed");
-    static final DotName TIMED_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Timed");
-    static final DotName REGISTRY_TYPE_ANNOTATION = DotName
-            .createSimple("org.eclipse.microprofile.metrics.annotation.RegistryType");
 
     // Metrics
-    static final DotName COUNTER = DotName.createSimple("org.eclipse.microprofile.metrics.Counter");
-    static final DotName HISTOGRAM = DotName.createSimple("org.eclipse.microprofile.metrics.Histogram");
-    static final DotName METER = DotName.createSimple("org.eclipse.microprofile.metrics.Meter");
-    static final DotName SIMPLE_TIMER = DotName.createSimple("org.eclipse.microprofile.metrics.SimpleTimer");
-    static final DotName TIMER = DotName.createSimple("org.eclipse.microprofile.metrics.Timer");
-    private static final Logger log = Logger.getLogger(MicroprofileMetricsProcessor.class);
+    static final DotName GAUGE = DotName.createSimple("org.eclipse.microprofile.metrics.Gauge");
+
+    static class MicroprofileMetricsEnabled implements BooleanSupplier {
+        MicrometerConfig mConfig;
+
+        public boolean getAsBoolean() {
+            // Require explicit config: Some extensions reference MP Metrics classes,
+            // so we can't consult the application classpath for help
+            return mConfig.binder.mpMetrics.getEnabled().orElse(false);
+        }
+    }
 
     static boolean isSingleInstance(ClassInfo classInfo) {
         BuiltinScope beanScope = BuiltinScope.from(classInfo);
@@ -64,32 +53,50 @@ public class MicroprofileMetricsProcessor {
                 BuiltinScope.SINGLETON.equals(beanScope);
     }
 
-    static String dotSeparate(String s) {
+    static String dotSeparate(String... values) {
         StringBuilder b = new StringBuilder();
-        for (int i = 0; i < s.length(); i++) {
-            char ch = s.charAt(i);
-            if (Character.isUpperCase(ch)) {
-                if (i > 0) {
-                    b.append('.');
+        for (String s : values) {
+            if (b.length() > 0) {
+                b.append('.');
+            }
+            for (int i = 0; i < s.length(); i++) {
+                char ch = s.charAt(i);
+                if (Character.isUpperCase(ch)) {
+                    if (i > 0) {
+                        b.append('.');
+                    }
+                    b.append(Character.toLowerCase(ch));
+                } else {
+                    b.append(ch);
                 }
-                b.append(Character.toLowerCase(ch));
-            } else {
-                b.append(ch);
             }
         }
         return b.toString();
     }
 
     @BuildStep(onlyIf = MicroprofileMetricsEnabled.class)
+    IndexDependencyBuildItem addDependencies() {
+        return new IndexDependencyBuildItem("org.eclipse.microprofile.metrics", "microprofile-metrics-api");
+    }
+
+    @BuildStep(onlyIf = MicroprofileMetricsEnabled.class)
     AdditionalBeanBuildItem registerBeanClasses() {
+        // Use string class names: do not force-load a class that pulls in microprofile dependencies
         return AdditionalBeanBuildItem.builder()
-                .addBeanClass(MicroprofileMetricsBinder.class)
+                .addBeanClass(MP_METRICS_BINDER.toString())
                 .setUnremovable()
                 .build();
     }
 
     @BuildStep(onlyIf = MicroprofileMetricsEnabled.class)
-    void addDependencies(BuildProducer<IndexDependencyBuildItem> indexDependency) {
-        indexDependency.produce(new IndexDependencyBuildItem("org.eclipse.microprofile.metrics", "microprofile-metrics-api"));
+    void processAnnotatedGauges(BuildProducer<GeneratedBeanBuildItem> generatedBeans,
+            CombinedIndexBuildItem indexBuildItem) {
+        IndexView index = indexBuildItem.getIndex();
+        ClassOutput classOutput = new GeneratedBeanGizmoAdaptor(generatedBeans);
+
+        // Defer MP Metrics imports until we know MP Metrics support in this extension
+        // has been enabled.
+
+        GaugeAnnotationHandler.processAnnotatedGauges(index, classOutput);
     }
 }
