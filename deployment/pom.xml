@@ -70,12 +70,6 @@
       <optional>true</optional>
     </dependency>
 
-    <dependency>
-      <groupId>org.eclipse.microprofile.metrics</groupId>
-      <artifactId>microprofile-metrics-api</artifactId>
-      <optional>true</optional>
-    </dependency>
-
     <!-- Registry providers (optional) -->
 
     <dependency>

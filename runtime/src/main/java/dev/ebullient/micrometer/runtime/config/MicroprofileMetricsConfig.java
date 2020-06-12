@@ -14,9 +14,15 @@ public class MicroprofileMetricsConfig implements MicrometerConfig.CapabilityEna
      * Microprofile Metrics support.
      * <p>
      * Support for Microprofile metrics will be enabled if micrometer
-     * support is enabled, Microprofile APIs are on the classpath
-     * and either this value is true, or this value is unset and
-     * {@code quarkus.micrometer.binder-enabled-default} is true.
+     * support is enabled, and either this value is true. You need to also
+     * include the microprofile api jar to your dependencies:
+     * 
+     * <pre>
+     * &lt;dependency&gt;
+     *   &lt;groupId&gt;org.eclipse.microprofile.metrics&lt;/groupId&gt;
+     *   &lt;artifactId&gt;microprofile-metrics-api&lt;/artifactId&gt;
+     * &lt;/dependency&gt;
+     * </pre>
      */
     @ConfigItem
     public Optional<Boolean> enabled;

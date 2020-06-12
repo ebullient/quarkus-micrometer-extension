@@ -3,7 +3,6 @@ package dev.ebullient.micrometer.runtime.binder.microprofile;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Tag;
 
 public interface GaugeAdapter extends org.eclipse.microprofile.metrics.Gauge<Number> {
