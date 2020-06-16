@@ -1,18 +1,13 @@
 package dev.ebullient.micrometer.deployment;
 
-import org.jboss.jandex.ClassInfo;
-
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.builder.item.MultiBuildItem;
 
+@SuppressWarnings("unchecked")
 public final class MicrometerRegistryProviderBuildItem extends MultiBuildItem {
 
     final Class<? extends MeterRegistry> clazz;
-
-    public MicrometerRegistryProviderBuildItem(ClassInfo provider) {
-        this(provider.name().toString());
-    }
 
     public MicrometerRegistryProviderBuildItem(Class<?> providedRegistryClass) {
         this.clazz = (Class<? extends MeterRegistry>) providedRegistryClass;

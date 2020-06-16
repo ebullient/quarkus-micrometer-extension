@@ -7,7 +7,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
 import org.eclipse.microprofile.metrics.MetricUnits;
-import org.eclipse.microprofile.metrics.annotation.Counted;
 import org.eclipse.microprofile.metrics.annotation.Gauge;
 import org.eclipse.microprofile.metrics.annotation.Timed;
 import org.jboss.resteasy.annotations.jaxrs.PathParam;
@@ -16,6 +15,12 @@ import org.jboss.resteasy.annotations.jaxrs.PathParam;
 public class PrimeResource {
 
     private LongAccumulator highestPrimeSoFar = new LongAccumulator(Long::max, 2);
+
+    CountedResource countedResource;
+
+    PrimeResource(CountedResource countedResource) {
+        this.countedResource = countedResource;
+    }
 
     @GET
     @Path("/{number}")
@@ -26,12 +31,12 @@ public class PrimeResource {
             return result;
         }
 
+        countedResource.called();
         highestPrimeSoFar.accumulate(number);
         return number + " is prime.";
     }
 
-    @Counted(name = "performedChecks", description = "How many primality checks have been performed.")
-    @Timed(name = "checksTimer", description = "A measure how long it takes to perform the primality test.", unit = MetricUnits.MILLISECONDS)
+    @Timed(name = "checksTimer", description = "Measure how long it takes to perform the primality test.", unit = MetricUnits.MILLISECONDS)
     private String checkPrime(long number) {
         if (number < 1) {
             return "Only natural numbers can be prime numbers.";

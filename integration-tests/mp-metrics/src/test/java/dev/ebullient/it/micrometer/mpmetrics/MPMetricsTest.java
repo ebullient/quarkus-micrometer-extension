@@ -52,9 +52,9 @@ class MPMetricsTest {
 
                 // Prometheus body has ALL THE THINGS in no particular order
 
-                .body(containsString(
-                        "method_counted{method=\"performedChecks\",class=\"dev.ebullient.it.micrometer.mpmetrics.PrimeResource\"}=3"))
-                .body(containsString("dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar=887"));
+                .body(containsString("counted_resource_ctor_total{scope=\"application\",} 1.0"))
+                .body(containsString("counted_resource_called_total{scope=\"application\",} 2.0\n"))
+                .body(containsString("prime_resource_highest_prime_number_so_far{scope=\"application\",} 887"));
     }
 
     @Test
@@ -77,8 +77,7 @@ class MPMetricsTest {
 
                 // Prometheus body has ALL THE THINGS in no particular order
 
-                .body(containsString(
-                        "method_counted{method=\"performedChecks\",class=\"dev.ebullient.it.micrometer.mpmetrics.PrimeResource\"}=4"))
-                .body(containsString("dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar=887"));
+                .body(containsString("counted_resource_called_total{scope=\"application\",} 2.0\n"))
+                .body(containsString("prime_resource_highest_prime_number_so_far{scope=\"application\",} 887"));
     }
 }
