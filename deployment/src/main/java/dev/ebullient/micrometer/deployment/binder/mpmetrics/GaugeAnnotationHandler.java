@@ -1,20 +1,15 @@
 package dev.ebullient.micrometer.deployment.binder.mpmetrics;
 
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.spi.DeploymentException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.eclipse.microprofile.metrics.annotation.Gauge;
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.ClassInfo;
-import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.logging.Logger;
@@ -34,8 +29,6 @@ import io.quarkus.gizmo.ResultHandle;
  */
 public class GaugeAnnotationHandler {
     private static final Logger log = Logger.getLogger(GaugeAnnotationHandler.class);
-
-    static final DotName GAUGE_ANNOTATION = DotName.createSimple(Gauge.class.getName());
 
     /**
      * Given this Widget class:
@@ -87,7 +80,7 @@ public class GaugeAnnotationHandler {
 
         // @Gauge applies to methods
         // It creates a callback the method or field on single object instance
-        for (AnnotationInstance annotation : index.getAnnotations(GAUGE_ANNOTATION)) {
+        for (AnnotationInstance annotation : index.getAnnotations(MetricDotNames.GAUGE_ANNOTATION)) {
             AnnotationTarget target = annotation.target();
             MethodInfo method = target.asMethod();
             ClassInfo classInfo = method.declaringClass();
@@ -108,7 +101,7 @@ public class GaugeAnnotationHandler {
                     classCreator.addAnnotation(ApplicationScoped.class);
                 }
 
-                GaugeAnnotationInfo gaugeInfo = new GaugeAnnotationInfo(classInfo, method, annotation, index);
+                MetricAnnotationInfo gaugeInfo = new MetricAnnotationInfo(annotation, index, classInfo, method);
 
                 FieldCreator fieldCreator = classCreator.getFieldCreator("target", classInfo.name().toString())
                         .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
@@ -118,9 +111,9 @@ public class GaugeAnnotationHandler {
                 try (MethodCreator mc = classCreator.getMethodCreator("<init>", void.class)) {
                     mc.setModifiers(Modifier.PUBLIC);
 
-                    ResultHandle tagsHandle = mc.newArray(String.class, gaugeInfo.tags.size());
-                    for (int i = 0; i < gaugeInfo.tags.size(); i++) {
-                        mc.writeArrayValue(tagsHandle, i, mc.load(gaugeInfo.tags.get(i)));
+                    ResultHandle tagsHandle = mc.newArray(String.class, gaugeInfo.tags.length);
+                    for (int i = 0; i < gaugeInfo.tags.length; i++) {
+                        mc.writeArrayValue(tagsHandle, i, mc.load(gaugeInfo.tags[i]));
                     }
                     // super(name, description, tags)
                     mc.invokeSpecialMethod(superInit, mc.getThis(),
@@ -130,6 +123,7 @@ public class GaugeAnnotationHandler {
                     mc.returnValue(null);
                 }
 
+                // This is the magic: this is the method that forwards to the target object instance
                 MethodDescriptor getNumberValue = null;
                 try (MethodCreator mc = classCreator.getMethodCreator("getValue", Number.class)) {
                     mc.setModifiers(Modifier.PUBLIC);
@@ -138,6 +132,7 @@ public class GaugeAnnotationHandler {
                     getNumberValue = mc.getMethodDescriptor();
                 }
 
+                // This is the unresolved-generic form of this argument (from the original templated interface)
                 try (MethodCreator generic = classCreator.getMethodCreator("getValue", Object.class)) {
                     generic.setModifiers(Modifier.PUBLIC);
                     generic.returnValue(generic.invokeVirtualMethod(getNumberValue, generic.getThis()));
@@ -149,7 +144,7 @@ public class GaugeAnnotationHandler {
 
     static private void verifyGaugeScope(AnnotationTarget target, ClassInfo classInfo) {
         log.debugf("Gauge: %s, %s, %s", target, target.kind(), classInfo);
-        if (!MicroprofileMetricsProcessor.isSingleInstance(classInfo)) {
+        if (!MetricDotNames.isSingleInstance(classInfo)) {
             log.errorf("Bean %s declares a org.eclipse.microprofile.metrics.annotation.Gauge " +
                     "but is of a scope that may create multiple instances of a bean. " +
                     "@Gauge annotations establish a callback to a single instance. Only use " +
@@ -158,41 +153,6 @@ public class GaugeAnnotationHandler {
                     classInfo.name().toString());
             throw new DeploymentException(classInfo.name().toString() +
                     " uses a @Gauge annotation, but is not @ApplicationScoped, a @Singleton, or a REST endpoint");
-        }
-    }
-
-    static class GaugeAnnotationInfo {
-        String name;
-        String description;
-        List<String> tags;
-
-        GaugeAnnotationInfo(ClassInfo classInfo, MethodInfo method, AnnotationInstance annotation, IndexView index) {
-            tags = new ArrayList<>();
-            tags.add("scope=application");
-            tags.addAll(Arrays.asList(annotation.valueWithDefault(index, "tags").asStringArray()));
-
-            // Assign a name to the gauge
-            name = annotation.valueWithDefault(index, "name").asString();
-
-            boolean absolute = annotation.valueWithDefault(index, "absolute").asBoolean();
-            if (!absolute) {
-                // Generate a name: micrometer conventions for dotted strings
-                if (name.isEmpty()) {
-                    name = MicroprofileMetricsProcessor.dotSeparate(classInfo.simpleName(), method.name());
-                } else {
-                    name = MicroprofileMetricsProcessor.dotSeparate(classInfo.simpleName(), name);
-                }
-                String unit = annotation.valueWithDefault(index, "unit").asString();
-                if (!unit.isEmpty() && !unit.equalsIgnoreCase("none")) {
-                    name = name + "." + unit;
-                }
-                log.infof("%s will be registered using name %s", annotation, name);
-            }
-
-            description = annotation.valueWithDefault(index, "description").asString();
-            if (description.isEmpty()) {
-                description = name;
-            }
         }
     }
 }

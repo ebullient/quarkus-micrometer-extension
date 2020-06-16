@@ -1,6 +1,7 @@
 package dev.ebullient.micrometer.runtime.binder.microprofile;
 
 import java.util.Iterator;
+import java.util.function.Supplier;
 
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
@@ -22,7 +23,7 @@ public class MicroprofileMetricsBinder implements MeterBinder {
             GaugeAdapter g = gauges.next();
 
             // Build and register the gauge
-            Gauge.Builder builder = Gauge.builder(g.name(), g::getValue);
+            Gauge.Builder<Supplier<Number>> builder = Gauge.builder(g.name(), g::getValue);
             if (g.description() != null) {
                 builder.description(g.description());
             }
@@ -31,8 +32,5 @@ public class MicroprofileMetricsBinder implements MeterBinder {
             }
             builder.strongReference(true).register(registry);
         }
-
-        // register all annotation-declared counted methods
     }
-
 }
