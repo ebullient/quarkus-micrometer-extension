@@ -1,11 +1,12 @@
 package dev.ebullient.micrometer.deployment.binder.mpmetrics;
 
-import java.util.*;
 import java.util.function.BooleanSupplier;
 
 import javax.enterprise.context.Dependent;
 
-import org.jboss.jandex.*;
+import org.jboss.jandex.AnnotationTarget;
+import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.IndexView;
 import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
@@ -100,6 +101,6 @@ public class MicroprofileMetricsProcessor {
         // Use classes to defer MP Metrics imports until we know MP Metrics support
         // has been enabled.
         GaugeAnnotationHandler.processAnnotatedGauges(index, classOutput);
-        annotationsTransformers.produce(CountedAnnotationHandler.processCountedAnnotations(index));
+        annotationsTransformers.produce(AnnotationHandler.processCountedAnnotations(index));
     }
 }

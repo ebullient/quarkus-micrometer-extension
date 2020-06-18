@@ -4,8 +4,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.jboss.jandex.*;
+import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTarget;
+import org.jboss.jandex.AnnotationValue;
+import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.DotName;
+import org.jboss.jandex.IndexView;
+import org.jboss.jandex.MethodInfo;
 import org.jboss.logging.Logger;
+
+import io.quarkus.arc.processor.DotNames;
 
 public class MetricAnnotationInfo {
     private static final Logger log = Logger.getLogger(MetricAnnotationInfo.class);
@@ -17,12 +25,10 @@ public class MetricAnnotationInfo {
     String[] tags;
 
     MetricAnnotationInfo(AnnotationInstance input, IndexView index, ClassInfo classInfo, MethodInfo method) {
-        AnnotationValue value;
-
         output.add(input.valueWithDefault(index, "displayName"));
 
         // Remember the unit
-        value = input.valueWithDefault(index, "unit");
+        AnnotationValue value = input.valueWithDefault(index, "unit");
         output.add(value);
         String unit = value.asString();
         if ("none".equalsIgnoreCase(unit)) {
@@ -34,22 +40,31 @@ public class MetricAnnotationInfo {
         output.add(value);
         boolean absolute = value.asBoolean();
 
-        // Assign a name
+        // Assign a name. Start with the name in the annotation...
         name = input.valueWithDefault(index, "name").asString();
-        if (!absolute) {
-            // Generate a name: micrometer conventions for dotted strings
-            if (name.isEmpty()) {
-                String methodName = method == null ? "<method>" : method.name();
-                name = createMetricName(classInfo.simpleName(), methodName, unit);
+        if (input.target().kind() == AnnotationTarget.Kind.METHOD) {
+            if (absolute) {
+                name = name.isEmpty() ? method.name() : name;
             } else {
-                name = createMetricName(classInfo.simpleName(), name, unit);
+                name = append(classInfo.name().toString(), name.isEmpty() ? method.name() : name);
             }
         }
+        if (input.target().kind() == AnnotationTarget.Kind.CLASS) {
+            String methodName = method == null ? "<method>" : method.name();
+            log.debugf("### %s %s %s", name, classInfo, methodName);
+            if (absolute) {
+                name = append(name.isEmpty() ? classInfo.simpleName() : name, methodName);
+            } else {
+                DotName className = classInfo.name();
+                name = append(name.isEmpty() ? DotNames.packageName(className) : className.toString(), methodName);
+            }
+        }
+
         output.add(AnnotationValue.createStringValue("name", name));
 
         description = input.valueWithDefault(index, "description").asString();
         if (description.isEmpty()) {
-            description = name;
+            description = (name + " " + unit).trim();
         }
         output.add(AnnotationValue.createStringValue("description", description));
 
@@ -63,23 +78,13 @@ public class MetricAnnotationInfo {
         log.infof("%s --> name='%s', description='%s', tags='%s'", input, name, description, Arrays.asList(tags));
     }
 
-    static String createMetricName(String... values) {
+    static String append(String... values) {
         StringBuilder b = new StringBuilder();
         for (String s : values) {
             if (b.length() > 0 && !s.isEmpty()) {
                 b.append('.');
             }
-            for (int i = 0; i < s.length(); i++) {
-                char ch = s.charAt(i);
-                if (Character.isUpperCase(ch)) {
-                    if (i > 0) {
-                        b.append('.');
-                    }
-                    b.append(Character.toLowerCase(ch));
-                } else {
-                    b.append(ch);
-                }
-            }
+            b.append(s);
         }
         return b.toString();
     }
