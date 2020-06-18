@@ -23,7 +23,6 @@ public class MetricDotNames {
     static final DotName COUNTED_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Counted");
     static final DotName GAUGE_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Gauge");
     static final DotName METERED_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Metered");
-    static final DotName METRIC_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Metric");
     static final DotName SIMPLY_TIMED_ANNOTATION = DotName
             .createSimple("org.eclipse.microprofile.metrics.annotation.SimplyTimed");
     static final DotName TIMED_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Timed");
@@ -36,6 +35,8 @@ public class MetricDotNames {
             SIMPLY_TIMED_ANNOTATION,
             TIMED_ANNOTATION));
 
+    static final DotName METRIC_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Metric");
+
     // these are needed for determining whether a class is a REST endpoint or JAX-RS provider
     static final DotName JAXRS_PATH = DotName.createSimple("javax.ws.rs.Path");
     static final DotName REST_CONTROLLER = DotName
@@ -43,6 +44,8 @@ public class MetricDotNames {
 
     static final DotName COUNTED_INTERCEPTOR = DotName
             .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.CountedInterceptor");
+    static final DotName TIMED_INTERCEPTOR = DotName
+            .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.TimedInterceptor");
 
     static boolean containsMetricAnnotation(Map<DotName, List<AnnotationInstance>> annotations) {
         for (DotName name : METRICS_ANNOTATIONS) {

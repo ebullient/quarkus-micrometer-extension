@@ -104,7 +104,7 @@ public class GaugeAnnotationHandler {
                 MetricAnnotationInfo gaugeInfo = new MetricAnnotationInfo(annotation, index, classInfo, method);
 
                 FieldCreator fieldCreator = classCreator.getFieldCreator("target", classInfo.name().toString())
-                        .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+                        .setModifiers(0); // package private
                 fieldCreator.addAnnotation(Inject.class);
 
                 // Create the constructor

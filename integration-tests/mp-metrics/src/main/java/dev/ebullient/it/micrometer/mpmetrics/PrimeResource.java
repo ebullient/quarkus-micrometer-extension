@@ -37,7 +37,7 @@ public class PrimeResource {
     }
 
     @Timed(name = "checksTimer", description = "Measure how long it takes to perform the primality test.", unit = MetricUnits.MILLISECONDS)
-    private String checkPrime(long number) {
+    String checkPrime(long number) {
         if (number < 1) {
             return "Only natural numbers can be prime numbers.";
         }

@@ -1,16 +1,25 @@
 package dev.ebullient.micrometer.deployment.binder.mpmetrics;
 
-import java.util.*;
 import java.util.function.BooleanSupplier;
 
 import javax.enterprise.context.Dependent;
 
-import org.jboss.jandex.*;
+import org.jboss.jandex.AnnotationTarget;
+import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.DotName;
+import org.jboss.jandex.IndexView;
 import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
-import io.quarkus.arc.deployment.*;
+import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.arc.deployment.AnnotationsTransformerBuildItem;
+import io.quarkus.arc.deployment.BeanArchiveIndexBuildItem;
+import io.quarkus.arc.deployment.BeanDeploymentValidatorBuildItem;
+import io.quarkus.arc.deployment.CustomScopeAnnotationsBuildItem;
+import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
+import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
 import io.quarkus.arc.processor.AnnotationsTransformer;
+import io.quarkus.arc.processor.BeanDeploymentValidator;
 import io.quarkus.arc.processor.BuildExtension;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -47,6 +56,7 @@ public class MicroprofileMetricsProcessor {
                 .setUnremovable()
                 .addBeanClass(MetricDotNames.MP_METRICS_BINDER.toString())
                 .addBeanClass(MetricDotNames.COUNTED_INTERCEPTOR.toString())
+                .addBeanClass(MetricDotNames.TIMED_INTERCEPTOR.toString())
                 .build();
     }
 
@@ -100,6 +110,19 @@ public class MicroprofileMetricsProcessor {
         // Use classes to defer MP Metrics imports until we know MP Metrics support
         // has been enabled.
         GaugeAnnotationHandler.processAnnotatedGauges(index, classOutput);
-        annotationsTransformers.produce(CountedAnnotationHandler.processCountedAnnotations(index));
+        annotationsTransformers
+                .produce(AnnotationHandler.processClassMethodAnnotations(index, MetricDotNames.COUNTED_ANNOTATION));
+        annotationsTransformers
+                .produce(AnnotationHandler.processClassMethodAnnotations(index, MetricDotNames.TIMED_ANNOTATION));
+    }
+
+    @BuildStep
+    BeanDeploymentValidatorBuildItem beanDeploymentValidator() {
+        return new BeanDeploymentValidatorBuildItem(new BeanDeploymentValidator() {
+            @Override
+            public void validate(ValidationContext context) {
+                System.out.println(context);
+            }
+        });
     }
 }
