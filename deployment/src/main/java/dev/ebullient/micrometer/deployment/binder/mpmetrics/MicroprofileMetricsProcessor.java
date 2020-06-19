@@ -6,7 +6,6 @@ import javax.enterprise.context.Dependent;
 
 import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.ClassInfo;
-import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 import org.jboss.logging.Logger;
 
@@ -55,6 +54,7 @@ public class MicroprofileMetricsProcessor {
         return AdditionalBeanBuildItem.builder()
                 .setUnremovable()
                 .addBeanClass(MetricDotNames.MP_METRICS_BINDER.toString())
+                .addBeanClass(MetricDotNames.CONCURRENT_GAUGE_INTERCEPTOR.toString())
                 .addBeanClass(MetricDotNames.COUNTED_INTERCEPTOR.toString())
                 .addBeanClass(MetricDotNames.TIMED_INTERCEPTOR.toString())
                 .build();
@@ -109,11 +109,20 @@ public class MicroprofileMetricsProcessor {
 
         // Use classes to defer MP Metrics imports until we know MP Metrics support
         // has been enabled.
+
+        // Gauges.
         GaugeAnnotationHandler.processAnnotatedGauges(index, classOutput);
-        annotationsTransformers
-                .produce(AnnotationHandler.processClassMethodAnnotations(index, MetricDotNames.COUNTED_ANNOTATION));
-        annotationsTransformers
-                .produce(AnnotationHandler.processClassMethodAnnotations(index, MetricDotNames.TIMED_ANNOTATION));
+        annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
+                MetricDotNames.COUNTED_ANNOTATION));
+
+        annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
+                MetricDotNames.CONCURRENT_GAUGE_ANNOTATION));
+
+        // Timed annotations. SimplyTimed --> Timed
+        annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
+                MetricDotNames.TIMED_ANNOTATION));
+        annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
+                MetricDotNames.SIMPLY_TIMED_ANNOTATION, MetricDotNames.TIMED_ANNOTATION));
     }
 
     @BuildStep

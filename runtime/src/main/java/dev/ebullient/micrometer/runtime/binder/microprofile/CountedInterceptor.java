@@ -51,5 +51,4 @@ public class CountedInterceptor {
         }
         return context.proceed();
     }
-
 }

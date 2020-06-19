@@ -30,10 +30,6 @@ public class MetricAnnotationInfo {
         // Remember the unit
         AnnotationValue value = input.valueWithDefault(index, "unit");
         output.add(value);
-        String unit = value.asString();
-        if ("none".equalsIgnoreCase(unit)) {
-            unit = "";
-        }
 
         // Remember absolute
         value = input.valueWithDefault(index, "absolute");
@@ -63,7 +59,7 @@ public class MetricAnnotationInfo {
 
         description = input.valueWithDefault(index, "description").asString();
         if (description.isEmpty()) {
-            description = (name + " " + unit).trim();
+            description = name;
         }
         output.add(AnnotationValue.createStringValue("description", description));
 

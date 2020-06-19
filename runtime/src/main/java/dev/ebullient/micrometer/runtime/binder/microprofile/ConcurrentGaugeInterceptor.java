@@ -1,27 +1,21 @@
 package dev.ebullient.micrometer.runtime.binder.microprofile;
 
 import javax.annotation.Priority;
-import javax.interceptor.AroundConstruct;
-import javax.interceptor.AroundInvoke;
-import javax.interceptor.AroundTimeout;
-import javax.interceptor.Interceptor;
-import javax.interceptor.InvocationContext;
+import javax.interceptor.*;
 
-import org.eclipse.microprofile.metrics.annotation.Timed;
+import org.eclipse.microprofile.metrics.annotation.ConcurrentGauge;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.*;
 
-@SuppressWarnings("unused")
-@Timed
+@ConcurrentGauge
 @Interceptor
 @Priority(Interceptor.Priority.LIBRARY_BEFORE + 10)
-public class TimedInterceptor {
+public class ConcurrentGaugeInterceptor {
 
     // Micrometer meter registry
     final MeterRegistry registry;
 
-    TimedInterceptor(MeterRegistry registry) {
+    ConcurrentGaugeInterceptor(MeterRegistry registry) {
         this.registry = registry;
     }
 
@@ -41,18 +35,20 @@ public class TimedInterceptor {
     }
 
     Object time(InvocationContext context, String methodName) throws Exception {
-        Timed item = MicroprofileMetricsBinder.getAnnotation(context, Timed.class);
+        ConcurrentGauge item = MicroprofileMetricsBinder.getAnnotation(context, ConcurrentGauge.class);
         if (item != null) {
-            Timer.Sample sample = Timer.start(registry);
+            LongTaskTimer.Sample sample = LongTaskTimer
+                    .builder(item.name().replace("<method>", methodName))
+                    .description(item.description().replace("<method>", methodName))
+                    .tags(item.tags())
+                    .register(registry)
+                    .start();
+
             try {
                 return context.proceed();
             } finally {
                 try {
-                    sample.stop(Timer
-                            .builder(item.name().replace("<method>", methodName))
-                            .description(item.description().replace("<method>", methodName))
-                            .tags(item.tags())
-                            .register(registry));
+                    sample.stop();
                 } catch (Exception e) {
                     // ignoring on purpose
                 }
