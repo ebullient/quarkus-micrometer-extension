@@ -51,7 +51,11 @@ public class MetricAnnotationInfo {
                 name = append(name.isEmpty() ? classInfo.simpleName() : name, methodName);
             } else {
                 DotName className = classInfo.name();
-                name = append(name.isEmpty() ? DotNames.packageName(className) : className.toString(), methodName);
+                if (name.isEmpty()) {
+                    name = append(className.toString(), methodName);
+                } else {
+                    name = append(DotNames.packageName(className), name, methodName);
+                }
             }
         }
 
