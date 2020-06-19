@@ -47,13 +47,18 @@ class MPMetricsTest {
         given()
                 .when().get("/prometheus")
                 .then()
-                .log().body()
                 .statusCode(200)
 
                 // Prometheus body has ALL THE THINGS in no particular order
 
-                .body(containsString("dev_ebullient_it_micrometer_mpmetrics_CountedResource_total{scope=\"application\",} 1.0"))
-                .body(containsString("dev_ebullient_it_micrometer_mpmetrics_called_total{scope=\"application\",} 2.0"))
+                // number of concurrent requests at time of sample
+                .body(containsString(
+                        "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_checkIfPrime_seconds_count{scope=\"application\",} 0.0"))
+
+                .body(containsString(
+                        "dev_ebullient_it_micrometer_mpmetrics_CountedInstance_CountedInstance_total{scope=\"application\",} 1.0"))
+                .body(containsString(
+                        "dev_ebullient_it_micrometer_mpmetrics_CountedInstance_countPrimes_total{scope=\"application\",} 2.0"))
                 .body(containsString(
                         "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar{scope=\"application\",} 887.0"));
     }
@@ -78,7 +83,8 @@ class MPMetricsTest {
 
                 // Prometheus body has ALL THE THINGS in no particular order
 
-                .body(containsString("dev_ebullient_it_micrometer_mpmetrics_called_total{scope=\"application\",} 2.0"))
+                .body(containsString(
+                        "dev_ebullient_it_micrometer_mpmetrics_CountedInstance_countPrimes_total{scope=\"application\",} 2.0"))
                 .body(containsString(
                         "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar{scope=\"application\",} 887.0"));
     }

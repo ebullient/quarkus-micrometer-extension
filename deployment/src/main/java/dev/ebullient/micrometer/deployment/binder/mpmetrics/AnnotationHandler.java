@@ -28,12 +28,17 @@ import io.quarkus.arc.processor.DotNames;
 public class AnnotationHandler {
     private static final Logger log = Logger.getLogger(AnnotationHandler.class);
 
-    static AnnotationsTransformerBuildItem processClassMethodAnnotations(final IndexView index, DotName meterAnnotation) {
+    static AnnotationsTransformerBuildItem transformClassMethodAnnotations(final IndexView index, DotName meterAnnotation) {
+        return transformClassMethodAnnotations(index, meterAnnotation, meterAnnotation);
+    }
+
+    static AnnotationsTransformerBuildItem transformClassMethodAnnotations(final IndexView index,
+            DotName sourceAnnotation, DotName targetAnnotation) {
         return new AnnotationsTransformerBuildItem(new AnnotationsTransformer() {
             @Override
             public void transform(TransformationContext ctx) {
                 final Collection<AnnotationInstance> annotations = ctx.getAnnotations();
-                AnnotationInstance annotation = getMeterAnnotations(annotations, meterAnnotation);
+                AnnotationInstance annotation = getMeterAnnotations(annotations, sourceAnnotation);
                 if (annotation == null) {
                     return;
                 }
@@ -58,7 +63,7 @@ public class AnnotationHandler {
                 MetricAnnotationInfo timedInfo = new MetricAnnotationInfo(annotation, index, classInfo, methodInfo);
                 ctx.transform()
                         .remove(x -> x == annotation)
-                        .add(meterAnnotation, timedInfo.getAnnotationValues())
+                        .add(targetAnnotation, timedInfo.getAnnotationValues())
                         .done();
             }
         });

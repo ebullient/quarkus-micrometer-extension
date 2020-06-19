@@ -30,10 +30,6 @@ public class MetricAnnotationInfo {
         // Remember the unit
         AnnotationValue value = input.valueWithDefault(index, "unit");
         output.add(value);
-        String unit = value.asString();
-        if ("none".equalsIgnoreCase(unit)) {
-            unit = "";
-        }
 
         // Remember absolute
         value = input.valueWithDefault(index, "absolute");
@@ -55,7 +51,11 @@ public class MetricAnnotationInfo {
                 name = append(name.isEmpty() ? classInfo.simpleName() : name, methodName);
             } else {
                 DotName className = classInfo.name();
-                name = append(name.isEmpty() ? DotNames.packageName(className) : className.toString(), methodName);
+                if (name.isEmpty()) {
+                    name = append(className.toString(), methodName);
+                } else {
+                    name = append(DotNames.packageName(className), name, methodName);
+                }
             }
         }
 
@@ -63,7 +63,7 @@ public class MetricAnnotationInfo {
 
         description = input.valueWithDefault(index, "description").asString();
         if (description.isEmpty()) {
-            description = (name + " " + unit).trim();
+            description = name;
         }
         output.add(AnnotationValue.createStringValue("description", description));
 

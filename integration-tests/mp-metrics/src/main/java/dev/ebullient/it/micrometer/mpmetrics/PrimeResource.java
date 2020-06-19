@@ -7,6 +7,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
 import org.eclipse.microprofile.metrics.MetricUnits;
+import org.eclipse.microprofile.metrics.annotation.ConcurrentGauge;
 import org.eclipse.microprofile.metrics.annotation.Gauge;
 import org.eclipse.microprofile.metrics.annotation.Timed;
 import org.jboss.resteasy.annotations.jaxrs.PathParam;
@@ -16,22 +17,23 @@ public class PrimeResource {
 
     private LongAccumulator highestPrimeSoFar = new LongAccumulator(Long::max, 2);
 
-    CountedResource countedResource;
+    CountedInstance countedResource;
 
-    PrimeResource(CountedResource countedResource) {
+    PrimeResource(CountedInstance countedResource) {
         this.countedResource = countedResource;
     }
 
     @GET
     @Path("/{number}")
     @Produces("text/plain")
+    @ConcurrentGauge()
     public String checkIfPrime(@PathParam long number) {
         String result = checkPrime(number);
         if (result.length() > 0) {
             return result;
         }
 
-        countedResource.called();
+        countedResource.countPrimes();
         highestPrimeSoFar.accumulate(number);
         return number + " is prime.";
     }

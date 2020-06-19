@@ -3,11 +3,11 @@ package dev.ebullient.it.micrometer.mpmetrics;
 import org.eclipse.microprofile.metrics.annotation.Counted;
 
 @Counted(description = "called for each discovered prime number")
-public class CountedResource {
+public class CountedInstance {
 
-    CountedResource() {
+    CountedInstance() {
     }
 
-    public void called() {
+    public void countPrimes() {
     }
 }

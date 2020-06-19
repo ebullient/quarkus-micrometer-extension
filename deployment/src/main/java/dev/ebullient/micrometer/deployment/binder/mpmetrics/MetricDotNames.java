@@ -42,6 +42,8 @@ public class MetricDotNames {
     static final DotName REST_CONTROLLER = DotName
             .createSimple("org.springframework.web.bind.annotation.RestController");
 
+    static final DotName CONCURRENT_GAUGE_INTERCEPTOR = DotName
+            .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.ConcurrentGaugeInterceptor");
     static final DotName COUNTED_INTERCEPTOR = DotName
             .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.CountedInterceptor");
     static final DotName TIMED_INTERCEPTOR = DotName
