@@ -7,10 +7,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
 import org.eclipse.microprofile.metrics.MetricUnits;
-import org.eclipse.microprofile.metrics.annotation.ConcurrentGauge;
-import org.eclipse.microprofile.metrics.annotation.Gauge;
-import org.eclipse.microprofile.metrics.annotation.Metered;
-import org.eclipse.microprofile.metrics.annotation.Timed;
+import org.eclipse.microprofile.metrics.annotation.*;
 import org.jboss.resteasy.annotations.jaxrs.PathParam;
 
 @Path("/prime")
@@ -40,7 +37,9 @@ public class PrimeResource {
         return number + " is prime.";
     }
 
+    // This method is both counted and timed. The counted annotation should be suppressed/removed
     @Timed(name = "checksTimer", description = "Measure how long it takes to perform the primality test.", unit = MetricUnits.MILLISECONDS)
+    @Counted
     String checkPrime(long number) {
         if (number < 1) {
             return "Only natural numbers can be prime numbers.";

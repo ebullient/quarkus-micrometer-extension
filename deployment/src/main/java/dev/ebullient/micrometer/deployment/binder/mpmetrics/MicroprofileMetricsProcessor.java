@@ -125,6 +125,5 @@ public class MicroprofileMetricsProcessor {
         annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
                 MetricDotNames.SIMPLY_TIMED_ANNOTATION, MetricDotNames.TIMED_ANNOTATION));
 
-
     }
 }
