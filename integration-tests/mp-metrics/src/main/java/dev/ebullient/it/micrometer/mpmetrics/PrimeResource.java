@@ -9,6 +9,7 @@ import javax.ws.rs.Produces;
 import org.eclipse.microprofile.metrics.MetricUnits;
 import org.eclipse.microprofile.metrics.annotation.ConcurrentGauge;
 import org.eclipse.microprofile.metrics.annotation.Gauge;
+import org.eclipse.microprofile.metrics.annotation.Metered;
 import org.eclipse.microprofile.metrics.annotation.Timed;
 import org.jboss.resteasy.annotations.jaxrs.PathParam;
 
@@ -19,6 +20,7 @@ public class PrimeResource {
 
     CountedInstance countedResource;
 
+    @Metered
     PrimeResource(CountedInstance countedResource) {
         this.countedResource = countedResource;
     }

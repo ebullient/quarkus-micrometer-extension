@@ -56,7 +56,6 @@ public class AnnotationHandler {
                     }
                     classInfo = target.asClass();
                 }
-                log.debugf("## METER: %s", annotation.values());
 
                 // Make sure all attributes exist on the @Timed annotation
                 // remove the existing annotation, and add a new one with all the fields

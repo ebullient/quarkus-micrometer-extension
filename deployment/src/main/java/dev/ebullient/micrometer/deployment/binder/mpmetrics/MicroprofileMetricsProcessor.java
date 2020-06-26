@@ -13,12 +13,10 @@ import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.AnnotationsTransformerBuildItem;
 import io.quarkus.arc.deployment.BeanArchiveIndexBuildItem;
-import io.quarkus.arc.deployment.BeanDeploymentValidatorBuildItem;
 import io.quarkus.arc.deployment.CustomScopeAnnotationsBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
 import io.quarkus.arc.processor.AnnotationsTransformer;
-import io.quarkus.arc.processor.BeanDeploymentValidator;
 import io.quarkus.arc.processor.BuildExtension;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -113,25 +111,20 @@ public class MicroprofileMetricsProcessor {
         // Gauges.
         GaugeAnnotationHandler.processAnnotatedGauges(index, classOutput);
         annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
-                MetricDotNames.COUNTED_ANNOTATION));
-
-        annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
                 MetricDotNames.CONCURRENT_GAUGE_ANNOTATION));
+
+        // Invocation counters
+        annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
+                MetricDotNames.COUNTED_ANNOTATION));
+        annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
+                MetricDotNames.METERED_ANNOTATION, MetricDotNames.COUNTED_ANNOTATION));
 
         // Timed annotations. SimplyTimed --> Timed
         annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
                 MetricDotNames.TIMED_ANNOTATION));
         annotationsTransformers.produce(AnnotationHandler.transformClassMethodAnnotations(index,
                 MetricDotNames.SIMPLY_TIMED_ANNOTATION, MetricDotNames.TIMED_ANNOTATION));
-    }
 
-    @BuildStep
-    BeanDeploymentValidatorBuildItem beanDeploymentValidator() {
-        return new BeanDeploymentValidatorBuildItem(new BeanDeploymentValidator() {
-            @Override
-            public void validate(ValidationContext context) {
-                System.out.println(context);
-            }
-        });
+
     }
 }

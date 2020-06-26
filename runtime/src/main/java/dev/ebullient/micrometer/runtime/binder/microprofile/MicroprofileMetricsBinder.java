@@ -18,13 +18,13 @@ import io.quarkus.arc.ArcInvocationContext;
 public class MicroprofileMetricsBinder implements MeterBinder {
 
     @Inject
-    Instance<GaugeAdapter> allGaugeAdapters;
+    Instance<AnnotatedGaugeAdapter> allGaugeAdapters;
 
     @Override
     public void bindTo(@NonNull MeterRegistry registry) {
         // register all annotation-declared gauges
-        for (Iterator<GaugeAdapter> gauges = allGaugeAdapters.iterator(); gauges.hasNext();) {
-            GaugeAdapter g = gauges.next();
+        for (Iterator<AnnotatedGaugeAdapter> gauges = allGaugeAdapters.iterator(); gauges.hasNext();) {
+            AnnotatedGaugeAdapter g = gauges.next();
 
             // Build and register the gauge
             Gauge.Builder<Supplier<Number>> builder = Gauge.builder(g.name(), g::getValue);
