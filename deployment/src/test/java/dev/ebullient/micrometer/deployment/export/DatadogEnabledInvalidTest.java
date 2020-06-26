@@ -8,15 +8,11 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import dev.ebullient.micrometer.runtime.MicrometerRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.config.validate.ValidationException;
 import io.quarkus.test.QuarkusUnitTest;
 
 public class DatadogEnabledInvalidTest {
-    static final String REGISTRY_CLASS_NAME = "io.micrometer.datadog.DatadogMeterRegistry";
-    static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
-
     @RegisterExtension
     static final QuarkusUnitTest config = new QuarkusUnitTest()
             .withConfigurationResource("test-logging.properties")

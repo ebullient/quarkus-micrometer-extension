@@ -39,10 +39,11 @@ public class MetricAnnotationInfo {
         // Assign a name. Start with the name in the annotation...
         name = input.valueWithDefault(index, "name").asString();
         if (input.target().kind() == AnnotationTarget.Kind.METHOD) {
+            String methodName = method.name().replace("<init>", classInfo.simpleName());
             if (absolute) {
-                name = name.isEmpty() ? method.name() : name;
+                name = name.isEmpty() ? methodName : name;
             } else {
-                name = append(classInfo.name().toString(), name.isEmpty() ? method.name() : name);
+                name = append(classInfo.name().toString(), name.isEmpty() ? methodName : name);
             }
         }
         if (input.target().kind() == AnnotationTarget.Kind.CLASS) {

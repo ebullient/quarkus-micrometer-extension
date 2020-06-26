@@ -14,7 +14,7 @@ import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.runtime.binder.microprofile.GaugeAdapter;
+import dev.ebullient.micrometer.runtime.binder.microprofile.AnnotatedGaugeAdapter;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.gizmo.FieldCreator;
@@ -72,8 +72,8 @@ public class GaugeAnnotationHandler {
      */
     static void processAnnotatedGauges(IndexView index, ClassOutput classOutput) {
 
-        final Class<?> gaugeAdapter = GaugeAdapter.class;
-        final Class<?> gaugeAdapterImpl = GaugeAdapter.GaugeAdapterImpl.class;
+        final Class<?> gaugeAdapter = AnnotatedGaugeAdapter.class;
+        final Class<?> gaugeAdapterImpl = AnnotatedGaugeAdapter.GaugeAdapterImpl.class;
 
         final MethodDescriptor superInit = MethodDescriptor.ofConstructor(gaugeAdapterImpl, String.class, String.class,
                 String[].class);
