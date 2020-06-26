@@ -2,6 +2,7 @@ package dev.ebullient.it.micrometer.mpmetrics;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
 
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -60,7 +61,10 @@ class MPMetricsTest {
                 .body(containsString(
                         "dev_ebullient_it_micrometer_mpmetrics_CountedInstance_countPrimes_total{scope=\"application\",} 2.0"))
                 .body(containsString(
-                        "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar{scope=\"application\",} 887.0"));
+                        "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar{scope=\"application\",} 887.0"))
+
+                // the counter associated with a timed method should have been removed
+                .body(not(containsString("dev_ebullient_it_micrometer_mpmetrics_PrimeResource_checkPrime")));
     }
 
     @Test

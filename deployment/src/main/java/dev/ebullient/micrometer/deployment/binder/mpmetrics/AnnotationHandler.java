@@ -57,7 +57,18 @@ public class AnnotationHandler {
                     classInfo = target.asClass();
                 }
 
-                // Make sure all attributes exist on the @Timed annotation
+                // Remove the @Counted annotation (avoid interceptor) for
+                // things that are both counted AND timed
+                if (MetricDotNames.COUNTED_ANNOTATION.equals(sourceAnnotation) &&
+                        removeCountedWhenTimed(target, classInfo, methodInfo)) {
+                    ctx.transform()
+                            .remove(x -> x == annotation)
+                            .done();
+
+                    return;
+                }
+
+                // Make sure all attributes exist:
                 // remove the existing annotation, and add a new one with all the fields
                 MetricAnnotationInfo timedInfo = new MetricAnnotationInfo(annotation, index, classInfo, methodInfo);
                 ctx.transform()
@@ -75,5 +86,30 @@ public class AnnotationHandler {
             }
         }
         return null;
+    }
+
+    static boolean removeCountedWhenTimed(AnnotationTarget target, ClassInfo classInfo, MethodInfo methodInfo) {
+        if (methodInfo == null &&
+                getMeterAnnotations(classInfo.classAnnotations(), MetricDotNames.TIMED_ANNOTATION) == null &&
+                getMeterAnnotations(classInfo.classAnnotations(), MetricDotNames.SIMPLY_TIMED_ANNOTATION) == null) {
+            return false;
+        }
+        if (!methodInfo.hasAnnotation(MetricDotNames.SIMPLY_TIMED_ANNOTATION) &&
+                !methodInfo.hasAnnotation(MetricDotNames.TIMED_ANNOTATION)) {
+            return false;
+        }
+
+        log.debugf("Counted: %s, %s, %s, %s", target, target.kind(), classInfo, methodInfo);
+        if (methodInfo == null) {
+            log.warnf("Bean %s is both counted and timed. The @Counted annotation " +
+                    "will be suppressed in favor of the count emitted by the timer.",
+                    classInfo.name().toString());
+        } else {
+            log.warnf("Method %s of bean %s is both counted and timed. The @Counted annotation " +
+                    "will be suppressed in favor of the count emitted by the timer.",
+                    methodInfo.name(),
+                    classInfo.name().toString());
+        }
+        return true;
     }
 }
