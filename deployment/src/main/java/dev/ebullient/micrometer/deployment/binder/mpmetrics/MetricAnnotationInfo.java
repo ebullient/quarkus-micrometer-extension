@@ -4,13 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.jboss.jandex.AnnotationInstance;
-import org.jboss.jandex.AnnotationTarget;
-import org.jboss.jandex.AnnotationValue;
-import org.jboss.jandex.ClassInfo;
-import org.jboss.jandex.DotName;
-import org.jboss.jandex.IndexView;
-import org.jboss.jandex.MethodInfo;
+import org.jboss.jandex.*;
 import org.jboss.logging.Logger;
 
 import io.quarkus.arc.processor.DotNames;
@@ -22,14 +16,21 @@ public class MetricAnnotationInfo {
 
     String name;
     String description;
+    String unit;
     String[] tags;
 
-    MetricAnnotationInfo(AnnotationInstance input, IndexView index, ClassInfo classInfo, MethodInfo method) {
+    MetricAnnotationInfo(AnnotationInstance input, IndexView index, ClassInfo classInfo, MethodInfo method,
+            FieldInfo fieldInfo) {
         output.add(input.valueWithDefault(index, "displayName"));
 
         // Remember the unit
-        AnnotationValue value = input.valueWithDefault(index, "unit");
-        output.add(value);
+        AnnotationValue value = input.value("unit");
+        if (value != null) {
+            output.add(value);
+            if (!"none".equals(value.asString())) {
+                unit = value.asString();
+            }
+        }
 
         // Remember absolute
         value = input.valueWithDefault(index, "absolute");
@@ -38,6 +39,14 @@ public class MetricAnnotationInfo {
 
         // Assign a name. Start with the name in the annotation...
         name = input.valueWithDefault(index, "name").asString();
+        if (input.target().kind() == AnnotationTarget.Kind.FIELD) {
+            String fieldName = fieldInfo.name();
+            if (absolute) {
+                name = name.isEmpty() ? fieldName : name;
+            } else {
+                name = append(classInfo.name().toString(), name.isEmpty() ? fieldName : name);
+            }
+        }
         if (input.target().kind() == AnnotationTarget.Kind.METHOD) {
             String methodName = method.name().replace("<init>", classInfo.simpleName());
             if (absolute) {
@@ -63,9 +72,6 @@ public class MetricAnnotationInfo {
         output.add(AnnotationValue.createStringValue("name", name));
 
         description = input.valueWithDefault(index, "description").asString();
-        if (description.isEmpty()) {
-            description = name;
-        }
         output.add(AnnotationValue.createStringValue("description", description));
 
         tags = createTags(input, index);
@@ -75,7 +81,10 @@ public class MetricAnnotationInfo {
         }
         output.add(AnnotationValue.createArrayValue("tags", tagValues));
 
-        log.infof("%s --> name='%s', description='%s', tags='%s'", input, name, description, Arrays.asList(tags));
+        log.debugf("%s --> name='%s', description='%s', unit='%s', tags='%s'",
+                input, name, description,
+                unit == null ? "none" : unit,
+                Arrays.asList(tags));
     }
 
     static String append(String... values) {

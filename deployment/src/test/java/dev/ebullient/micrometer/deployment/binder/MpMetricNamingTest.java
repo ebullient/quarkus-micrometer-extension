@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import dev.ebullient.micrometer.runtime.binder.microprofile.metric.InjectedMetricProducer;
+import dev.ebullient.test.MpColorResource;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.test.QuarkusUnitTest;
 
@@ -26,23 +28,27 @@ public class MpMetricNamingTest {
     MeterRegistry registry;
 
     @Inject
+    InjectedMetricProducer metricProducer;
+
+    @Inject
     MpColorResource colors;
 
     @Test
-    public void testMeterRegistryPresent() {
+    public void testAnnotatedMeterNames() {
+        Assertions.assertNotNull(metricProducer, "InjectedMetricProducer should not be null");
+
         colors.blue();
         colors.red();
         colors.green();
         colors.yellow();
 
-        // We want a composite that contains both registries.
         Assertions.assertNotNull(
-                registry.find("dev.ebullient.micrometer.deployment.binder.MpColorResource.red").counter());
+                registry.find("dev.ebullient.test.MpColorResource.red").counter());
         Assertions.assertNotNull(
-                registry.find("dev.ebullient.micrometer.deployment.binder.MpColorResource.blueCount").counter());
+                registry.find("dev.ebullient.test.MpColorResource.blueCount").counter());
         Assertions.assertNotNull(
                 registry.find("greenCount").counter());
         Assertions.assertNotNull(
-                registry.find("yellow").counter());
+                registry.find("yellow").gauge());
     }
 }

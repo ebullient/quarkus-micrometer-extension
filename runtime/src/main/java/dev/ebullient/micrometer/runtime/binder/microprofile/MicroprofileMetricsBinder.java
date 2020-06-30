@@ -6,9 +6,10 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import javax.enterprise.inject.Instance;
-import javax.inject.Inject;
 import javax.interceptor.InvocationContext;
 
+import dev.ebullient.micrometer.runtime.binder.microprofile.metric.AnnotatedGaugeAdapter;
+import dev.ebullient.micrometer.runtime.binder.microprofile.metric.InjectedMetricProducer;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
@@ -17,8 +18,14 @@ import io.quarkus.arc.ArcInvocationContext;
 
 public class MicroprofileMetricsBinder implements MeterBinder {
 
-    @Inject
-    Instance<AnnotatedGaugeAdapter> allGaugeAdapters;
+    final Instance<AnnotatedGaugeAdapter> allGaugeAdapters;
+
+    final InjectedMetricProducer metricProvider;
+
+    MicroprofileMetricsBinder(Instance<AnnotatedGaugeAdapter> allGaugeAdapters, InjectedMetricProducer metricProvider) {
+        this.allGaugeAdapters = allGaugeAdapters;
+        this.metricProvider = metricProvider;
+    }
 
     @Override
     public void bindTo(@NonNull MeterRegistry registry) {
@@ -33,6 +40,9 @@ public class MicroprofileMetricsBinder implements MeterBinder {
             }
             if (g.tags() != null) {
                 builder.tags(g.tags());
+            }
+            if (g.baseUnit() != null) {
+                builder.baseUnit(g.baseUnit());
             }
             builder.strongReference(true).register(registry);
         }

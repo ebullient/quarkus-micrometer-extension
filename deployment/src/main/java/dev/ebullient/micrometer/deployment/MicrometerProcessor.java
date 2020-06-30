@@ -30,13 +30,11 @@ import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.BeanContainerBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.arc.processor.DotNames;
-import io.quarkus.deployment.annotations.BuildProducer;
-import io.quarkus.deployment.annotations.BuildStep;
-import io.quarkus.deployment.annotations.ExecutionTime;
-import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.annotations.*;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
+import io.quarkus.runtime.RuntimeValue;
 
 public class MicrometerProcessor {
     private static final DotName METER_REGISTRY = DotName.createSimple(MeterRegistry.class.getName());
@@ -132,9 +130,10 @@ public class MicrometerProcessor {
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.STATIC_INIT)
-    void createRootRegistry(MicrometerRecorder recorder,
+    RootMeterRegistryBuildItem createRootRegistry(MicrometerRecorder recorder,
             BeanContainerBuildItem beanContainerBuildItem) {
-        recorder.createRootRegistry();
+        RuntimeValue<MeterRegistry> registry = recorder.createRootRegistry();
+        return new RootMeterRegistryBuildItem(registry);
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)

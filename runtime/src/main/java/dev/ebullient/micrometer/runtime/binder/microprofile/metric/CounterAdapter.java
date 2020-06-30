@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.runtime.binder.microprofile;
+package dev.ebullient.micrometer.runtime.binder.microprofile.metric;
 
 import io.micrometer.core.instrument.Counter;
 

@@ -1,11 +1,16 @@
 package dev.ebullient.micrometer.runtime.binder.microprofile;
 
 import javax.annotation.Priority;
-import javax.interceptor.*;
+import javax.interceptor.AroundConstruct;
+import javax.interceptor.AroundInvoke;
+import javax.interceptor.AroundTimeout;
+import javax.interceptor.Interceptor;
+import javax.interceptor.InvocationContext;
 
 import org.eclipse.microprofile.metrics.annotation.ConcurrentGauge;
 
-import io.micrometer.core.instrument.*;
+import io.micrometer.core.instrument.LongTaskTimer;
+import io.micrometer.core.instrument.MeterRegistry;
 
 @ConcurrentGauge
 @Interceptor

@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.runtime.binder.microprofile;
+package dev.ebullient.micrometer.runtime.binder.microprofile.metric;
 
 public interface AnnotatedGaugeAdapter extends org.eclipse.microprofile.metrics.Gauge<Number> {
     String name();
@@ -7,6 +7,8 @@ public interface AnnotatedGaugeAdapter extends org.eclipse.microprofile.metrics.
 
     String[] tags();
 
+    String baseUnit();
+
     /**
      * Generic base instance of an AnnotatedGaugeAdapter.
      * Generated beans extend this base.
@@ -14,11 +16,17 @@ public interface AnnotatedGaugeAdapter extends org.eclipse.microprofile.metrics.
     public static abstract class GaugeAdapterImpl implements AnnotatedGaugeAdapter {
         String name;
         String description;
+        String baseUnit;
         String[] tags;
 
         public GaugeAdapterImpl(String name, String description, String[] tags) {
+            this(name, description, null, tags);
+        }
+
+        public GaugeAdapterImpl(String name, String description, String baseUnit, String[] tags) {
             this.name = name;
             this.description = description;
+            this.baseUnit = baseUnit;
             this.tags = tags;
         }
 
@@ -28,6 +36,10 @@ public interface AnnotatedGaugeAdapter extends org.eclipse.microprofile.metrics.
 
         public String description() {
             return description;
+        }
+
+        public String baseUnit() {
+            return baseUnit;
         }
 
         public String[] tags() {
