@@ -1,7 +1,11 @@
-package dev.ebullient.micrometer.deployment.binder;
+package dev.ebullient.test;
+
+import javax.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.metrics.annotation.Counted;
+import org.eclipse.microprofile.metrics.annotation.Gauge;
 
+@ApplicationScoped
 public class MpColorResource {
     @Counted
     public void red() {
@@ -18,8 +22,8 @@ public class MpColorResource {
         // ...
     }
 
-    @Counted(absolute = true)
-    public void yellow() {
-        // ...
+    @Gauge(absolute = true, unit = "jellybeans")
+    public long yellow() {
+        return 0L;
     }
 }

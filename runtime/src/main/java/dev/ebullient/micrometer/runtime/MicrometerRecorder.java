@@ -24,6 +24,7 @@ import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.arc.Arc;
+import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.ShutdownContext;
 import io.quarkus.runtime.annotations.Recorder;
 
@@ -34,16 +35,18 @@ public class MicrometerRecorder {
 
     private volatile static CompositeMeterRegistry quarkusRegistry;
 
-    public void createRootRegistry() {
+    public RuntimeValue<MeterRegistry> createRootRegistry() {
         Clock clock = Arc.container().beanManager().createInstance().select(Clock.class).get();
         quarkusRegistry = new CompositeMeterRegistry(clock);
         VertxMeterBinderAdapter.setMeterRegistry(quarkusRegistry);
         CompositeRegistryCreator.setRootRegistry(quarkusRegistry);
+        return new RuntimeValue<>(quarkusRegistry);
     }
 
     public void configureRegistry(Set<Class<? extends MeterRegistry>> registryClasses,
             ShutdownContext context) {
         BeanManager beanManager = Arc.container().beanManager();
+
         Set<Bean<?>> beans = new HashSet<>(beanManager.getBeans(MeterRegistry.class, Any.Literal.INSTANCE));
         beans.removeIf(bean -> bean.getBeanClass().equals(CompositeRegistryCreator.class));
 
@@ -59,14 +62,14 @@ public class MicrometerRecorder {
 
         log.debugf("Configuring Micrometer registries : %s", registryClasses);
 
-        Instance<MeterRegistry> allRegistries = Arc.container().beanManager().createInstance()
+        Instance<MeterRegistry> allRegistries = beanManager.createInstance()
                 .select(MeterRegistry.class, Any.Literal.INSTANCE);
 
         // Filters to change/constrain construction/output of metrics
         // Customize registries by class or type
         for (Class<? extends MeterRegistry> typeClass : registryClasses) {
             // @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters
-            Instance<MeterFilter> classFilters = Arc.container().beanManager().createInstance().select(
+            Instance<MeterFilter> classFilters = beanManager.createInstance().select(
                     MeterFilter.class,
                     new MeterFilterConstraint.Literal(typeClass));
             Instance<? extends MeterRegistry> typedRegistries = allRegistries.select(typeClass, Any.Literal.INSTANCE);
@@ -82,7 +85,7 @@ public class MicrometerRecorder {
         }
 
         // Customize all registries (global/common tags, e.g.)
-        Instance<MeterFilter> generalFilters = Arc.container().beanManager().createInstance().select(MeterFilter.class,
+        Instance<MeterFilter> generalFilters = beanManager.createInstance().select(MeterFilter.class,
                 Default.Literal.INSTANCE);
         log.debugf("Configuring root registry filters. hasFilters=%s", !generalFilters.isUnsatisfied());
         if (!generalFilters.isUnsatisfied()) {
@@ -92,14 +95,14 @@ public class MicrometerRecorder {
         }
 
         log.debugf("Configuring root registry : %s", quarkusRegistry);
-        Instance<NamingConvention> convention = Arc.container().beanManager().createInstance()
+        Instance<NamingConvention> convention = beanManager.createInstance()
                 .select(NamingConvention.class);
         if (convention.isResolvable()) {
             quarkusRegistry.config().namingConvention(convention.get());
         }
 
         // Binders must be last, apply to "top-level" registry
-        Instance<MeterBinder> allBinders = Arc.container().beanManager().createInstance().select(MeterBinder.class,
+        Instance<MeterBinder> allBinders = beanManager.createInstance().select(MeterBinder.class,
                 Any.Literal.INSTANCE);
         for (MeterBinder binder : allBinders) {
             binder.bindTo(quarkusRegistry);

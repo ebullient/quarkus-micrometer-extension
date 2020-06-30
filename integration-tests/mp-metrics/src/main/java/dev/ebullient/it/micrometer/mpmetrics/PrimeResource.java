@@ -16,19 +16,23 @@ public class PrimeResource {
     private LongAccumulator highestPrimeSoFar = new LongAccumulator(Long::max, 2);
 
     CountedInstance countedResource;
+    InjectedInstance injectedMetrics;
 
     @Metered
-    PrimeResource(CountedInstance countedResource) {
+    PrimeResource(CountedInstance countedResource, InjectedInstance injectedMetrics) {
         this.countedResource = countedResource;
+        this.injectedMetrics = injectedMetrics;
     }
 
     @GET
     @Path("/{number}")
     @Produces("text/plain")
-    @ConcurrentGauge()
+    @ConcurrentGauge(description = "active calls to checkIfPrime")
     public String checkIfPrime(@PathParam long number) {
         String result = checkPrime(number);
+
         if (result.length() > 0) {
+            injectedMetrics.count.inc();
             return result;
         }
 
@@ -41,6 +45,8 @@ public class PrimeResource {
     @Timed(name = "checksTimer", description = "Measure how long it takes to perform the primality test.", unit = MetricUnits.MILLISECONDS)
     @Counted
     String checkPrime(long number) {
+        injectedMetrics.histogram.update(number);
+
         if (number < 1) {
             return "Only natural numbers can be prime numbers.";
         }

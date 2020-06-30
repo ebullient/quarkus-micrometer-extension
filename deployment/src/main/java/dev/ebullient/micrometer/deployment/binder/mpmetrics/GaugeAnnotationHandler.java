@@ -14,7 +14,7 @@ import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.runtime.binder.microprofile.AnnotatedGaugeAdapter;
+import dev.ebullient.micrometer.runtime.binder.microprofile.metric.AnnotatedGaugeAdapter;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.gizmo.FieldCreator;
@@ -75,8 +75,11 @@ public class GaugeAnnotationHandler {
         final Class<?> gaugeAdapter = AnnotatedGaugeAdapter.class;
         final Class<?> gaugeAdapterImpl = AnnotatedGaugeAdapter.GaugeAdapterImpl.class;
 
-        final MethodDescriptor superInit = MethodDescriptor.ofConstructor(gaugeAdapterImpl, String.class, String.class,
-                String[].class);
+        final MethodDescriptor superInit = MethodDescriptor.ofConstructor(gaugeAdapterImpl,
+                String.class, String.class, String[].class);
+
+        final MethodDescriptor superInitUnit = MethodDescriptor.ofConstructor(gaugeAdapterImpl,
+                String.class, String.class, String.class, String[].class);
 
         // @Gauge applies to methods
         // It creates a callback the method or field on single object instance
@@ -101,9 +104,10 @@ public class GaugeAnnotationHandler {
                     classCreator.addAnnotation(ApplicationScoped.class);
                 }
 
-                MetricAnnotationInfo gaugeInfo = new MetricAnnotationInfo(annotation, index, classInfo, method);
+                MetricAnnotationInfo gaugeInfo = new MetricAnnotationInfo(annotation, index, classInfo, method, null);
 
-                FieldCreator fieldCreator = classCreator.getFieldCreator("target", classInfo.name().toString())
+                FieldCreator fieldCreator = classCreator
+                        .getFieldCreator("target", classInfo.name().toString())
                         .setModifiers(0); // package private
                 fieldCreator.addAnnotation(Inject.class);
 
@@ -115,11 +119,21 @@ public class GaugeAnnotationHandler {
                     for (int i = 0; i < gaugeInfo.tags.length; i++) {
                         mc.writeArrayValue(tagsHandle, i, mc.load(gaugeInfo.tags[i]));
                     }
-                    // super(name, description, tags)
-                    mc.invokeSpecialMethod(superInit, mc.getThis(),
-                            mc.load(gaugeInfo.name),
-                            mc.load(gaugeInfo.description),
-                            tagsHandle);
+
+                    if (gaugeInfo.unit == null) {
+                        // super(name, description, tags)
+                        mc.invokeSpecialMethod(superInit, mc.getThis(),
+                                mc.load(gaugeInfo.name),
+                                mc.load(gaugeInfo.description),
+                                tagsHandle);
+                    } else {
+                        // super(name, description, unit, tags)
+                        mc.invokeSpecialMethod(superInitUnit, mc.getThis(),
+                                mc.load(gaugeInfo.name),
+                                mc.load(gaugeInfo.description),
+                                mc.load(gaugeInfo.unit),
+                                tagsHandle);
+                    }
                     mc.returnValue(null);
                 }
 
@@ -143,7 +157,6 @@ public class GaugeAnnotationHandler {
     }
 
     static private void verifyGaugeScope(AnnotationTarget target, ClassInfo classInfo) {
-        log.debugf("Gauge: %s, %s, %s", target, target.kind(), classInfo);
         if (!MetricDotNames.isSingleInstance(classInfo)) {
             log.errorf("Bean %s declares a org.eclipse.microprofile.metrics.annotation.Gauge " +
                     "but is of a scope that may create multiple instances of a bean. " +
