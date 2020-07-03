@@ -1,11 +1,27 @@
-package dev.ebullient.micrometer.runtime.binder.microprofile.metric;
+package dev.ebullient.micrometer.runtime.binder.mpmetrics;
 
 import java.util.concurrent.atomic.LongAdder;
 
 import org.eclipse.microprofile.metrics.ConcurrentGauge;
+import org.eclipse.microprofile.metrics.MetricType;
 
-public class ConcurrentGaugeImpl implements ConcurrentGauge {
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.MeterRegistry;
+
+class ConcurrentGaugeImpl implements ConcurrentGauge, MeterHolder {
     final LongAdder longAdder = new LongAdder();
+    Gauge gauge;
+
+    ConcurrentGaugeImpl register(MpMetadata metadata, MetricDescriptor metricInfo, MeterRegistry registry) {
+        gauge = io.micrometer.core.instrument.Gauge.builder(metricInfo.name(), this::getCount)
+                .description(metadata.description())
+                .baseUnit(metadata.unit())
+                .tags(metricInfo.tags())
+                .strongReference(true)
+                .register(registry);
+        return this;
+    }
 
     @Override
     public long getCount() {
@@ -38,5 +54,15 @@ public class ConcurrentGaugeImpl implements ConcurrentGauge {
     @Override
     public void dec() {
         longAdder.decrement();
+    }
+
+    @Override
+    public Meter getMeter() {
+        return gauge;
+    }
+
+    @Override
+    public MetricType getType() {
+        return MetricType.CONCURRENT_GAUGE;
     }
 }

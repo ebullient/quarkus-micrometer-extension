@@ -54,7 +54,7 @@ class MPMetricsTest {
 
                 // number of concurrent requests at time of sample
                 .body(containsString(
-                        "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_checkIfPrime_seconds_count{scope=\"application\",} 0.0"))
+                        "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_checkIfPrime{scope=\"application\",} 0.0"))
 
                 .body(containsString(
                         "dev_ebullient_it_micrometer_mpmetrics_CountedInstance_CountedInstance_total{scope=\"application\",} 1.0"))
@@ -91,6 +91,8 @@ class MPMetricsTest {
                 .body(containsString(
                         "dev_ebullient_it_micrometer_mpmetrics_CountedInstance_countPrimes_total{scope=\"application\",} 2.0"))
                 .body(containsString(
-                        "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar{scope=\"application\",} 887.0"));
+                        "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar{scope=\"application\",} 887.0"))
+                .body(containsString(
+                        "dev_ebullient_it_micrometer_mpmetrics_InjectedInstance_notPrime_total{scope=\"application\",}"));
     }
 }

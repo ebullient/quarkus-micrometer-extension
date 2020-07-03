@@ -14,7 +14,7 @@ import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.logging.Logger;
 
-import dev.ebullient.micrometer.runtime.binder.microprofile.metric.AnnotatedGaugeAdapter;
+import dev.ebullient.micrometer.runtime.binder.mpmetrics.AnnotatedGaugeAdapter;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.gizmo.FieldCreator;
@@ -76,10 +76,10 @@ public class GaugeAnnotationHandler {
         final Class<?> gaugeAdapterImpl = AnnotatedGaugeAdapter.GaugeAdapterImpl.class;
 
         final MethodDescriptor superInit = MethodDescriptor.ofConstructor(gaugeAdapterImpl,
-                String.class, String.class, String[].class);
+                String.class, String.class, String.class, String[].class);
 
         final MethodDescriptor superInitUnit = MethodDescriptor.ofConstructor(gaugeAdapterImpl,
-                String.class, String.class, String.class, String[].class);
+                String.class, String.class, String.class, String.class, String[].class);
 
         // @Gauge applies to methods
         // It creates a callback the method or field on single object instance
@@ -121,16 +121,18 @@ public class GaugeAnnotationHandler {
                     }
 
                     if (gaugeInfo.unit == null) {
-                        // super(name, description, tags)
+                        // super(name, description, targetName, tags)
                         mc.invokeSpecialMethod(superInit, mc.getThis(),
                                 mc.load(gaugeInfo.name),
                                 mc.load(gaugeInfo.description),
+                                mc.load(method.toString()),
                                 tagsHandle);
                     } else {
-                        // super(name, description, unit, tags)
+                        // super(name, description, targetName. unit, tags)
                         mc.invokeSpecialMethod(superInitUnit, mc.getThis(),
                                 mc.load(gaugeInfo.name),
                                 mc.load(gaugeInfo.description),
+                                mc.load(method.toString()),
                                 mc.load(gaugeInfo.unit),
                                 tagsHandle);
                     }

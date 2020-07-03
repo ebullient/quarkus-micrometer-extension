@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.runtime.binder.microprofile;
+package dev.ebullient.micrometer.runtime.binder.mpmetrics;
 
 import javax.annotation.Priority;
 import javax.interceptor.AroundConstruct;
@@ -7,22 +7,20 @@ import javax.interceptor.AroundTimeout;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
 
+import org.eclipse.microprofile.metrics.MetricType;
 import org.eclipse.microprofile.metrics.annotation.Counted;
-
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
 
 @SuppressWarnings("unused")
 @Counted
 @Interceptor
 @Priority(Interceptor.Priority.LIBRARY_BEFORE + 10)
-public class CountedInterceptor {
+class CountedInterceptor {
 
     // Micrometer meter registry
-    final MeterRegistry registry;
+    final MpMetricsRegistry.MetricRegistryAdapter mpRegistry;
 
-    CountedInterceptor(MeterRegistry registry) {
-        this.registry = registry;
+    CountedInterceptor(MpMetricsRegistry.MetricRegistryAdapter mpRegistry) {
+        this.mpRegistry = mpRegistry;
     }
 
     @AroundConstruct
@@ -41,13 +39,14 @@ public class CountedInterceptor {
     }
 
     Object increment(InvocationContext context, String methodName) throws Exception {
-        Counted item = MicroprofileMetricsBinder.getAnnotation(context, Counted.class);
-        if (item != null) {
-            Counter.builder(item.name().replace("<method>", methodName))
-                    .description(item.description().replace("<method>", methodName))
-                    .tags(item.tags())
-                    .register(registry)
-                    .increment();
+        Counted annotation = MpMetricsRegistry.getAnnotation(context, Counted.class);
+        if (annotation != null) {
+            MpMetadata metadata = new MpMetadata(annotation.name().replace("<method>", methodName),
+                    annotation.description().replace("<method>", methodName),
+                    annotation.unit(),
+                    MetricType.COUNTER);
+
+            mpRegistry.interceptorCounter(metadata, annotation.tags()).inc();
         }
         return context.proceed();
     }

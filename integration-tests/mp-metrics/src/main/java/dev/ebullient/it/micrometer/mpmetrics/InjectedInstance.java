@@ -24,7 +24,7 @@ public class InjectedInstance {
     Histogram histogram;
 
     @Produces
-    @Metric(name = "passiveInjection", description = "This is registered implicitly")
+    @Metric(name = "passiveInjection", description = "This is ignored: @Produces + @Metric")
     Gauge<Integer> createGauge = new Gauge<Integer>() {
         @Override
         public Integer getValue() {

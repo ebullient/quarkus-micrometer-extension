@@ -55,6 +55,7 @@ public class MicroprofileMetricsProcessor {
                 .addBeanClass(MetricDotNames.COUNTED_INTERCEPTOR.toString())
                 .addBeanClass(MetricDotNames.INJECTED_METRIC_PRODUCER.toString())
                 .addBeanClass(MetricDotNames.TIMED_INTERCEPTOR.toString())
+                .addBeanClass(MetricDotNames.MP_METRICS_REGISTRY.toString())
                 .build();
     }
 
@@ -124,7 +125,8 @@ public class MicroprofileMetricsProcessor {
                 MetricDotNames.SIMPLY_TIMED_ANNOTATION, MetricDotNames.TIMED_ANNOTATION));
 
         // @Metric
-        annotationsTransformers.produce(AnnotationHandler.transformMetricAnnotations(index));
+        annotationsTransformers.produce(AnnotationHandler.transformAnnotations(index,
+                MetricDotNames.METRIC_ANNOTATION));
 
         return new UnremovableBeanBuildItem(new Predicate<BeanInfo>() {
             @Override

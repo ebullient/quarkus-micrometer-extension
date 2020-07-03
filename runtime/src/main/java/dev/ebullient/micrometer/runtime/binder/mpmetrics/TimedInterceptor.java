@@ -1,4 +1,4 @@
-package dev.ebullient.micrometer.runtime.binder.microprofile;
+package dev.ebullient.micrometer.runtime.binder.mpmetrics;
 
 import javax.annotation.Priority;
 import javax.interceptor.AroundConstruct;
@@ -7,21 +7,22 @@ import javax.interceptor.AroundTimeout;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
 
-import org.eclipse.microprofile.metrics.annotation.ConcurrentGauge;
+import org.eclipse.microprofile.metrics.MetricType;
+import org.eclipse.microprofile.metrics.annotation.Timed;
 
-import io.micrometer.core.instrument.LongTaskTimer;
-import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 
-@ConcurrentGauge
+@SuppressWarnings("unused")
+@Timed
 @Interceptor
 @Priority(Interceptor.Priority.LIBRARY_BEFORE + 10)
-public class ConcurrentGaugeInterceptor {
+class TimedInterceptor {
 
     // Micrometer meter registry
-    final MeterRegistry registry;
+    final MpMetricsRegistry.MetricRegistryAdapter mpRegistry;
 
-    ConcurrentGaugeInterceptor(MeterRegistry registry) {
-        this.registry = registry;
+    TimedInterceptor(MpMetricsRegistry.MetricRegistryAdapter mpRegistry) {
+        this.mpRegistry = mpRegistry;
     }
 
     @AroundConstruct
@@ -40,20 +41,20 @@ public class ConcurrentGaugeInterceptor {
     }
 
     Object time(InvocationContext context, String methodName) throws Exception {
-        ConcurrentGauge item = MicroprofileMetricsBinder.getAnnotation(context, ConcurrentGauge.class);
-        if (item != null) {
-            LongTaskTimer.Sample sample = LongTaskTimer
-                    .builder(item.name().replace("<method>", methodName))
-                    .description(item.description().replace("<method>", methodName))
-                    .tags(item.tags())
-                    .register(registry)
-                    .start();
+        Timed annotation = MpMetricsRegistry.getAnnotation(context, Timed.class);
+        if (annotation != null) {
+            MpMetadata metadata = new MpMetadata(annotation.name().replace("<method>", methodName),
+                    annotation.description().replace("<method>", methodName),
+                    annotation.unit(),
+                    MetricType.TIMER);
+            TimerAdapter impl = mpRegistry.interceptorTimer(metadata, annotation.tags());
 
+            Timer.Sample sample = impl.start();
             try {
                 return context.proceed();
             } finally {
                 try {
-                    sample.stop();
+                    impl.stop(sample);
                 } catch (Exception e) {
                     // ignoring on purpose
                 }

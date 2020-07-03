@@ -14,11 +14,11 @@ import io.quarkus.arc.processor.BuiltinScope;
  * Avoid importing classes that import MP Metrics API classes.
  */
 public class MetricDotNames {
-    static final String MICROMETER_EXTENSION_PKG = "dev.ebullient.micrometer.runtime.binder.microprofile";
+    static final String MICROMETER_EXTENSION_PKG = "dev.ebullient.micrometer.runtime.binder.mpmetrics";
 
     // Use string class names: do not force-load a class that pulls in microprofile dependencies
     static final DotName MP_METRICS_BINDER = DotName
-            .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.MicroprofileMetricsBinder");
+            .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.MpMetricsBinder");
     static final DotName CONCURRENT_GAUGE_ANNOTATION = DotName
             .createSimple("org.eclipse.microprofile.metrics.annotation.ConcurrentGauge");
     static final DotName COUNTED_ANNOTATION = DotName.createSimple("org.eclipse.microprofile.metrics.annotation.Counted");
@@ -39,7 +39,7 @@ public class MetricDotNames {
     static final DotName METRIC_ANNOTATION = DotName
             .createSimple("org.eclipse.microprofile.metrics.annotation.Metric");
     static final DotName ANNOTATED_GAUGE_ADAPTER = DotName
-            .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.metric.AnnotatedGaugeAdapter");
+            .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.AnnotatedGaugeAdapter");
 
     static final DotName METRIC = DotName
             .createSimple("org.eclipse.microprofile.metrics.Metric");
@@ -51,13 +51,15 @@ public class MetricDotNames {
 
     // Interceptors and producers
     static final DotName CONCURRENT_GAUGE_INTERCEPTOR = DotName
-            .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.ConcurrentGaugeInterceptor");
+            .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.ConcurrentGaugeInterceptor");
     static final DotName COUNTED_INTERCEPTOR = DotName
-            .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.CountedInterceptor");
+            .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.CountedInterceptor");
     static final DotName INJECTED_METRIC_PRODUCER = DotName
-            .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.metric.InjectedMetricProducer");
+            .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.InjectedMetricProducer");
     static final DotName TIMED_INTERCEPTOR = DotName
-            .createSimple("dev.ebullient.micrometer.runtime.binder.microprofile.TimedInterceptor");
+            .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.TimedInterceptor");
+    static final DotName MP_METRICS_REGISTRY = DotName
+            .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.MpMetricsRegistry");
 
     /**
      * @param annotations

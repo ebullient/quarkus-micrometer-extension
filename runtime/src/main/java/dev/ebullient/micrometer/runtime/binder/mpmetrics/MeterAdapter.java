@@ -1,14 +1,24 @@
-package dev.ebullient.micrometer.runtime.binder.microprofile.metric;
+package dev.ebullient.micrometer.runtime.binder.mpmetrics;
 
 import org.eclipse.microprofile.metrics.Meter;
+import org.eclipse.microprofile.metrics.MetricType;
 
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 
-public class MeterAdapter implements Meter {
-    final Counter counter;
+class MeterAdapter implements Meter, MeterHolder {
+    Counter counter;
 
-    MeterAdapter(Counter counter) {
-        this.counter = counter;
+    public MeterAdapter register(MpMetadata metadata, MetricDescriptor descriptor, MeterRegistry registry) {
+        if (counter == null || metadata.cleanDirtyMetadata()) {
+            counter = io.micrometer.core.instrument.Counter.builder(descriptor.name())
+                    .description(metadata.description())
+                    .baseUnit(metadata.unit())
+                    .tags(descriptor.tags())
+                    .register(registry);
+        }
+
+        return this;
     }
 
     @Override
@@ -44,5 +54,15 @@ public class MeterAdapter implements Meter {
     @Override
     public double getOneMinuteRate() {
         throw new UnsupportedOperationException("This operation is not supported when used with micrometer");
+    }
+
+    @Override
+    public io.micrometer.core.instrument.Meter getMeter() {
+        return counter;
+    }
+
+    @Override
+    public MetricType getType() {
+        return MetricType.METERED;
     }
 }

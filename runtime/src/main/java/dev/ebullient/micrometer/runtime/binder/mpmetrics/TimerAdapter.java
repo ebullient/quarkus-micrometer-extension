@@ -1,22 +1,35 @@
-package dev.ebullient.micrometer.runtime.binder.microprofile.metric;
+package dev.ebullient.micrometer.runtime.binder.mpmetrics;
 
 import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.microprofile.metrics.MetricType;
 import org.eclipse.microprofile.metrics.SimpleTimer;
 import org.eclipse.microprofile.metrics.Snapshot;
 
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 
-public class TimerAdapter implements org.eclipse.microprofile.metrics.Timer, org.eclipse.microprofile.metrics.SimpleTimer {
-    final Timer timer;
+class TimerAdapter
+        implements org.eclipse.microprofile.metrics.Timer, org.eclipse.microprofile.metrics.SimpleTimer, MeterHolder {
     final MeterRegistry registry;
+    Timer timer;
 
-    TimerAdapter(Timer timer, MeterRegistry registry) {
-        this.timer = timer;
+    TimerAdapter(MeterRegistry registry) {
         this.registry = registry;
+    }
+
+    public TimerAdapter register(MpMetadata metadata, MetricDescriptor descriptor) {
+        if (timer == null || metadata.cleanDirtyMetadata()) {
+            timer = io.micrometer.core.instrument.Timer.builder(descriptor.name())
+                    .description(metadata.description())
+                    .tags(descriptor.tags())
+                    .register(registry);
+        }
+
+        return this;
     }
 
     @Override
@@ -79,6 +92,19 @@ public class TimerAdapter implements org.eclipse.microprofile.metrics.Timer, org
         throw new UnsupportedOperationException("This operation is not supported when used with micrometer");
     }
 
+    @Override
+    public Meter getMeter() {
+        return timer;
+    }
+
+    public Timer.Sample start() {
+        return Timer.start(registry);
+    }
+
+    public void stop(Timer.Sample sample) {
+        sample.stop(timer);
+    }
+
     class SampleAdapter implements org.eclipse.microprofile.metrics.Timer.Context, SimpleTimer.Context {
         final Timer timer;
         final Timer.Sample sample;
@@ -97,5 +123,10 @@ public class TimerAdapter implements org.eclipse.microprofile.metrics.Timer, org
         public void close() {
             sample.stop(timer);
         }
+    }
+
+    @Override
+    public MetricType getType() {
+        return MetricType.TIMER;
     }
 }
