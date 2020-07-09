@@ -1,6 +1,6 @@
 # quarkus-micrometer-extension
 
-This is a quarkus extension that performs build time initialization, configuration, and injection of MeterRegistry, MeterBinder, and MeterFilter isntances for micrometer. This is not yet a comprehensive implementation. Support for registry implementations will be incremental, starting with Prometheus and JMX (JVM-mode only).
+This is a quarkus extension that performs build time initialization, configuration, and injection of MeterRegistry, MeterBinder, and MeterFilter instances for micrometer. This is not yet a comprehensive implementation. Support for registry implementations will be incremental, starting with Prometheus and JMX (JVM-mode only).
 
 Most things should "just work" after enabling the extension. You'll need to:
 
