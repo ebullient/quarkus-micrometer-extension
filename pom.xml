@@ -27,7 +27,7 @@
   <url>https://github.com/ebullient/quarkus-micrometer-extension</url>
 
   <properties>
-    <revision>1.0.0-SNAPSHOT</revision>
+    <revision>1.6.0</revision>
 
     <quarkus.version>1.6.0.Final</quarkus.version>
     <micrometer.version>1.5.2</micrometer.version>
