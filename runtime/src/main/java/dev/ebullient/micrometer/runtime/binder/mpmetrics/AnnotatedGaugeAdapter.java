@@ -17,6 +17,7 @@ public interface AnnotatedGaugeAdapter extends org.eclipse.microprofile.metrics.
 
     String baseUnit();
 
+    /** Called by MpRegistryAdapter to register the gauge */
     AnnotatedGaugeAdapter register(MetricDescriptor id, MeterRegistry registry);
 
     MetricDescriptor getId();
@@ -47,6 +48,7 @@ public interface AnnotatedGaugeAdapter extends org.eclipse.microprofile.metrics.
             this.tags = tags;
         }
 
+        /** Called by MpRegistryAdapter to register the gauge */
         public GaugeAdapterImpl register(MetricDescriptor id, MeterRegistry registry) {
             this.id = id;
             if (gauge == null || metadata.cleanDirtyMetadata()) {

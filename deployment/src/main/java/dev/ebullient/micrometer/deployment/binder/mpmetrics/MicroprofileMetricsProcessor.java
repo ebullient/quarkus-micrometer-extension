@@ -8,6 +8,8 @@ import javax.enterprise.context.Dependent;
 import org.jboss.jandex.*;
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.deployment.RootMeterRegistryBuildItem;
+import dev.ebullient.micrometer.runtime.binder.mpmetrics.MpMetricsRecorder;
 import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
 import io.quarkus.arc.deployment.*;
 import io.quarkus.arc.processor.AnnotationsTransformer;
@@ -138,5 +140,13 @@ public class MicroprofileMetricsProcessor {
                 return false;
             }
         });
+    }
+
+    @BuildStep(onlyIf = MicroprofileMetricsEnabled.class)
+    @Record(ExecutionTime.STATIC_INIT)
+    void configureRegistry(MpMetricsRecorder recorder,
+            RootMeterRegistryBuildItem rootMeterRegistryBuildItem) {
+        recorder.configureRegistryAdapter(rootMeterRegistryBuildItem.getValue());
+
     }
 }

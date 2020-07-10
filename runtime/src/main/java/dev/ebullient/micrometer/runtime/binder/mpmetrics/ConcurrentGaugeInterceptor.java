@@ -16,9 +16,9 @@ import org.eclipse.microprofile.metrics.annotation.ConcurrentGauge;
 class ConcurrentGaugeInterceptor {
 
     // Micrometer meter registry
-    final MpMetricsRegistry.MetricRegistryAdapter mpRegistry;
+    final MetricRegistryAdapter mpRegistry;
 
-    ConcurrentGaugeInterceptor(MpMetricsRegistry.MetricRegistryAdapter mpRegistry) {
+    ConcurrentGaugeInterceptor(MetricRegistryAdapter mpRegistry) {
         this.mpRegistry = mpRegistry;
     }
 

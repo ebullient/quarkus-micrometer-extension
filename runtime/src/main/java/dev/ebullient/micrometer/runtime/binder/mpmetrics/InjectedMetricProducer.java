@@ -22,9 +22,9 @@ class InjectedMetricProducer {
     private static final Logger log = Logger.getLogger(InjectedMetricProducer.class);
 
     // Micrometer meter registry
-    final MpMetricsRegistry.MetricRegistryAdapter mpRegistry;
+    final MetricRegistryAdapter mpRegistry;
 
-    InjectedMetricProducer(MpMetricsRegistry.MetricRegistryAdapter mpRegistry) {
+    InjectedMetricProducer(MetricRegistryAdapter mpRegistry) {
         this.mpRegistry = mpRegistry;
     }
 

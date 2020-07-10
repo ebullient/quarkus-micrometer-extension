@@ -19,9 +19,9 @@ import io.micrometer.core.instrument.Timer;
 class TimedInterceptor {
 
     // Micrometer meter registry
-    final MpMetricsRegistry.MetricRegistryAdapter mpRegistry;
+    final MetricRegistryAdapter mpRegistry;
 
-    TimedInterceptor(MpMetricsRegistry.MetricRegistryAdapter mpRegistry) {
+    TimedInterceptor(MetricRegistryAdapter mpRegistry) {
         this.mpRegistry = mpRegistry;
     }
 

@@ -105,7 +105,6 @@ public final class MicrometerConfig {
         public PrometheusConfig prometheus;
 
         public StackdriverConfig stackdriver;
-
     }
 
     public static interface CapabilityEnabled {

@@ -132,6 +132,8 @@ public class MicrometerProcessor {
     @Record(ExecutionTime.STATIC_INIT)
     RootMeterRegistryBuildItem createRootRegistry(MicrometerRecorder recorder,
             BeanContainerBuildItem beanContainerBuildItem) {
+        // BeanContainerBuildItem is present to indicate we call this after Arc is initialized
+
         RuntimeValue<MeterRegistry> registry = recorder.createRootRegistry();
         return new RootMeterRegistryBuildItem(registry);
     }
@@ -139,15 +141,18 @@ public class MicrometerProcessor {
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.RUNTIME_INIT)
     void configureRegistry(MicrometerRecorder recorder,
+            RootMeterRegistryBuildItem rootMeterRegistryBuildItem,
             List<MicrometerRegistryProviderBuildItem> providerClassItems,
             ShutdownContextBuildItem shutdownContextBuildItem,
             BeanContainerBuildItem beanContainerBuildItem) {
-        // BeanContainerBuildItem is only present to indicate we call this after Arc is initialized
+        // BeanContainerBuildItem is present to indicate we call this after Arc is initialized
 
         Set<Class<? extends MeterRegistry>> typeClasses = new HashSet<>();
         for (MicrometerRegistryProviderBuildItem item : providerClassItems) {
             typeClasses.add(item.getRegistryClass());
         }
-        recorder.configureRegistry(typeClasses, shutdownContextBuildItem);
+
+        // Runtime config at play here: host+port, API keys, etc.
+        recorder.configureRegistries(typeClasses, shutdownContextBuildItem);
     }
 }

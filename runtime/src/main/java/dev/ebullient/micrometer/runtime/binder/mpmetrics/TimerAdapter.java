@@ -28,7 +28,6 @@ class TimerAdapter
                     .tags(descriptor.tags())
                     .register(registry);
         }
-
         return this;
     }
 

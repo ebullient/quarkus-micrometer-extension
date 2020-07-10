@@ -17,9 +17,9 @@ import org.eclipse.microprofile.metrics.annotation.Counted;
 class CountedInterceptor {
 
     // Micrometer meter registry
-    final MpMetricsRegistry.MetricRegistryAdapter mpRegistry;
+    final MetricRegistryAdapter mpRegistry;
 
-    CountedInterceptor(MpMetricsRegistry.MetricRegistryAdapter mpRegistry) {
+    CountedInterceptor(MetricRegistryAdapter mpRegistry) {
         this.mpRegistry = mpRegistry;
     }
 

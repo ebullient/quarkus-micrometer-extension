@@ -19,7 +19,7 @@ public class MpMetricRegistrationTest {
             .overrideConfigKey("quarkus.micrometer.registry-enabled-default", "false");
 
     @Inject
-    MpMetricsRegistry.MetricRegistryAdapter mpRegistry;
+    MetricRegistryAdapter mpRegistry;
 
     @Inject
     MeterRegistry registry;

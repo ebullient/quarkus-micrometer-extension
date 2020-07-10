@@ -14,9 +14,9 @@ class MpMetricsBinder implements MeterBinder {
     final Instance<AnnotatedGaugeAdapter> allGaugeAdapters;
 
     // Micrometer application meter registry
-    final MpMetricsRegistry.MetricRegistryAdapter registry;
+    final MetricRegistryAdapter registry;
 
-    MpMetricsBinder(MpMetricsRegistry.MetricRegistryAdapter registry,
+    MpMetricsBinder(MetricRegistryAdapter registry,
             Instance<AnnotatedGaugeAdapter> allGaugeAdapters) {
         this.registry = registry;
         this.allGaugeAdapters = allGaugeAdapters;
@@ -25,6 +25,7 @@ class MpMetricsBinder implements MeterBinder {
     @Override
     public void bindTo(MeterRegistry r) {
         // register all annotation-declared gauges
+        // this needs to wait until associated/monitored objects can be created.
         for (Iterator<AnnotatedGaugeAdapter> gauges = allGaugeAdapters.iterator(); gauges.hasNext();) {
             registry.bindAnnotatedGauge(gauges.next());
         }
