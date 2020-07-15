@@ -8,8 +8,6 @@ import io.quarkus.runtime.annotations.ConfigItem;
 
 /**
  * Build / static runtime config for the Vert.x Binder
- *
- * @see MicrometerConfig#binderConfig
  */
 @ConfigGroup
 public class VertxConfig implements CapabilityEnabled {

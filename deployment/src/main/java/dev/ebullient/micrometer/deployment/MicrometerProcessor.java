@@ -19,8 +19,6 @@ import dev.ebullient.micrometer.runtime.CompositeRegistryCreator;
 import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
 import dev.ebullient.micrometer.runtime.MeterFilterConstraints;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
-import dev.ebullient.micrometer.runtime.binder.JvmMetricsProvider;
-import dev.ebullient.micrometer.runtime.binder.SystemMetricsProvider;
 import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
@@ -30,13 +28,11 @@ import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.BeanContainerBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.arc.processor.DotNames;
-import io.quarkus.deployment.annotations.BuildProducer;
-import io.quarkus.deployment.annotations.BuildStep;
-import io.quarkus.deployment.annotations.ExecutionTime;
-import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.annotations.*;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
+import io.quarkus.runtime.RuntimeValue;
 
 public class MicrometerProcessor {
     private static final DotName METER_REGISTRY = DotName.createSimple(MeterRegistry.class.getName());
@@ -68,8 +64,6 @@ public class MicrometerProcessor {
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
                 .setUnremovable()
                 .addBeanClass(ClockProvider.class)
-                .addBeanClass(JvmMetricsProvider.class)
-                .addBeanClass(SystemMetricsProvider.class)
                 .addBeanClass(CompositeRegistryCreator.class)
                 .addBeanClass(MeterFilterConstraint.class)
                 .addBeanClass(MeterFilterConstraints.class)
@@ -132,23 +126,30 @@ public class MicrometerProcessor {
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.STATIC_INIT)
-    void createRootRegistry(MicrometerRecorder recorder,
+    RootMeterRegistryBuildItem createRootRegistry(MicrometerRecorder recorder,
             BeanContainerBuildItem beanContainerBuildItem) {
-        recorder.createRootRegistry();
+        // BeanContainerBuildItem is present to indicate we call this after Arc is initialized
+
+        RuntimeValue<MeterRegistry> registry = recorder.createRootRegistry();
+        return new RootMeterRegistryBuildItem(registry);
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.RUNTIME_INIT)
     void configureRegistry(MicrometerRecorder recorder,
+            MicrometerConfig config,
+            RootMeterRegistryBuildItem rootMeterRegistryBuildItem,
             List<MicrometerRegistryProviderBuildItem> providerClassItems,
             ShutdownContextBuildItem shutdownContextBuildItem,
             BeanContainerBuildItem beanContainerBuildItem) {
-        // BeanContainerBuildItem is only present to indicate we call this after Arc is initialized
+        // BeanContainerBuildItem is present to indicate we call this after Arc is initialized
 
         Set<Class<? extends MeterRegistry>> typeClasses = new HashSet<>();
         for (MicrometerRegistryProviderBuildItem item : providerClassItems) {
             typeClasses.add(item.getRegistryClass());
         }
-        recorder.configureRegistry(typeClasses, shutdownContextBuildItem);
+
+        // Runtime config at play here: host+port, API keys, etc.
+        recorder.configureRegistries(config, typeClasses, shutdownContextBuildItem);
     }
 }

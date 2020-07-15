@@ -1,23 +1,23 @@
 package dev.ebullient.micrometer.deployment.binder;
 
-import dev.ebullient.micrometer.runtime.binder.HibernateMetricsProvider;
-import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import dev.ebullient.micrometer.runtime.binder.HibernateMetricsRecorder;
+import io.quarkus.arc.deployment.BeanContainerBuildItem;
 import io.quarkus.deployment.Capabilities;
-import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.annotations.ExecutionTime;
+import io.quarkus.deployment.annotations.Record;
 
 public class HibernateBinderProcessor {
-    @BuildStep
-    void createHibernateMicrometerBinders(BuildProducer<AdditionalBeanBuildItem> additionalBeans,
-            Capabilities capabilities) {
+    @BuildStep(onlyIf = VertxBinderProcessor.VertxBinderEnabled.class)
+    @Record(value = ExecutionTime.RUNTIME_INIT)
+    void createHibernateMicrometerBinders(Capabilities capabilities,
+            BeanContainerBuildItem beanContainer,
+            HibernateMetricsRecorder recorder) {
+
         if (!capabilities.isCapabilityPresent(Capabilities.HIBERNATE_ORM)) {
             return;
         }
 
-        additionalBeans.produce(
-                AdditionalBeanBuildItem.builder()
-                        .addBeanClass(HibernateMetricsProvider.class)
-                        .setUnremovable()
-                        .build());
+        recorder.registerMetrics(beanContainer.getValue());
     }
 }

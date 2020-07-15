@@ -1,8 +1,10 @@
 package dev.ebullient.micrometer.runtime;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,14 +18,20 @@ import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderAdapter;
-import io.micrometer.core.instrument.Clock;
+import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmHeapPressureMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.FileDescriptorMetrics;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.core.instrument.binder.system.UptimeMetrics;
 import io.micrometer.core.instrument.config.MeterFilter;
-import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.arc.Arc;
+import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.ShutdownContext;
 import io.quarkus.runtime.annotations.Recorder;
 
@@ -32,93 +40,103 @@ public class MicrometerRecorder {
     private static final Logger log = Logger.getLogger(MicrometerRecorder.class);
     static final int TRIM_POS = "quarkus.micrometer.export.".length();
 
-    private volatile static CompositeMeterRegistry quarkusRegistry;
+    /* STATIC_INIT */
+    public RuntimeValue<MeterRegistry> createRootRegistry() {
+        VertxMeterBinderAdapter.setMeterRegistry(Metrics.globalRegistry);
 
-    public void createRootRegistry() {
-        Clock clock = Arc.container().beanManager().createInstance().select(Clock.class).get();
-        quarkusRegistry = new CompositeMeterRegistry(clock);
-        VertxMeterBinderAdapter.setMeterRegistry(quarkusRegistry);
-        CompositeRegistryCreator.setRootRegistry(quarkusRegistry);
+        return new RuntimeValue<>(Metrics.globalRegistry);
     }
 
-    public void configureRegistry(Set<Class<? extends MeterRegistry>> registryClasses,
+    /* RUNTIME_INIT */
+    public void configureRegistries(MicrometerConfig config,
+            Set<Class<? extends MeterRegistry>> registryClasses,
             ShutdownContext context) {
         BeanManager beanManager = Arc.container().beanManager();
+
+        List<MeterRegistry> allRegistries = new ArrayList<>();
+        Map<Class<? extends MeterRegistry>, List<MeterFilter>> classMeterFilters = new HashMap<>(registryClasses.size());
+
+        // Find global/common registry configuration
+        Instance<MeterFilter> globalFilters = beanManager.createInstance()
+                .select(MeterFilter.class, Default.Literal.INSTANCE);
+
+        // Find MeterFilters for specific registry classes, i.e.:
+        // @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters
+        log.debugf("Configuring Micrometer registries : %s", registryClasses);
+        for (Class<? extends MeterRegistry> typeClass : registryClasses) {
+            Instance<MeterFilter> classFilters = beanManager.createInstance()
+                    .select(MeterFilter.class, new MeterFilterConstraint.Literal(typeClass));
+            if (!classFilters.isUnsatisfied()) {
+                log.debugf("MeterFilter discovered for %s", typeClass);
+                classMeterFilters.computeIfAbsent(typeClass, k -> new ArrayList<>()).add(classFilters.get());
+            }
+        }
+
+        // Find and configure MeterRegistry beans (includes runtime config)
         Set<Bean<?>> beans = new HashSet<>(beanManager.getBeans(MeterRegistry.class, Any.Literal.INSTANCE));
         beans.removeIf(bean -> bean.getBeanClass().equals(CompositeRegistryCreator.class));
 
-        // Find all of the registered/created registry beans of whatever types were found
         for (Bean<?> i : beans) {
-            MeterRegistry registry = (MeterRegistry) beanManager.getReference(i, MeterRegistry.class,
-                    beanManager.createCreationalContext(i));
+            MeterRegistry registry = (MeterRegistry) beanManager
+                    .getReference(i, MeterRegistry.class, beanManager.createCreationalContext(i));
 
-            if (registry != quarkusRegistry) {
-                quarkusRegistry.add(registry);
+            // Add & configure non-root registries
+            if (registry != Metrics.globalRegistry) {
+                applyMeterFilters(registry, globalFilters, classMeterFilters.get(registry.getClass()));
+                log.debugf("Adding configured registry %s", registry.getClass(), registry);
+                Metrics.globalRegistry.add(registry);
+                allRegistries.add(registry);
             }
         }
 
-        log.debugf("Configuring Micrometer registries : %s", registryClasses);
-
-        Instance<MeterRegistry> allRegistries = Arc.container().beanManager().createInstance()
-                .select(MeterRegistry.class, Any.Literal.INSTANCE);
-
-        // Filters to change/constrain construction/output of metrics
-        // Customize registries by class or type
-        for (Class<? extends MeterRegistry> typeClass : registryClasses) {
-            // @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters
-            Instance<MeterFilter> classFilters = Arc.container().beanManager().createInstance().select(
-                    MeterFilter.class,
-                    new MeterFilterConstraint.Literal(typeClass));
-            Instance<? extends MeterRegistry> typedRegistries = allRegistries.select(typeClass, Any.Literal.INSTANCE);
-
-            log.debugf("Configuring %s instances. hasFilters=%s", typeClass, !classFilters.isUnsatisfied());
-            if (!classFilters.isUnsatisfied() && !typedRegistries.isUnsatisfied()) {
-                for (Iterator<? extends MeterRegistry> registries = typedRegistries.iterator(); registries.hasNext();) {
-                    for (Iterator<MeterFilter> filters = classFilters.iterator(); filters.hasNext();) {
-                        registries.next().config().meterFilter(filters.next());
-                    }
-                }
-            }
+        // Base JVM Metrics
+        if (config.binder.jvm) {
+            new ClassLoaderMetrics().bindTo(Metrics.globalRegistry);
+            new JvmHeapPressureMetrics().bindTo(Metrics.globalRegistry);
+            new JvmMemoryMetrics().bindTo(Metrics.globalRegistry);
+            new JvmThreadMetrics().bindTo(Metrics.globalRegistry);
         }
 
-        // Customize all registries (global/common tags, e.g.)
-        Instance<MeterFilter> generalFilters = Arc.container().beanManager().createInstance().select(MeterFilter.class,
-                Default.Literal.INSTANCE);
-        log.debugf("Configuring root registry filters. hasFilters=%s", !generalFilters.isUnsatisfied());
-        if (!generalFilters.isUnsatisfied()) {
-            for (MeterFilter generalFilter : generalFilters) {
-                quarkusRegistry.config().meterFilter(generalFilter);
-            }
+        // System
+        if (config.binder.system) {
+            new UptimeMetrics().bindTo(Metrics.globalRegistry);
+            new ProcessorMetrics().bindTo(Metrics.globalRegistry);
+            new FileDescriptorMetrics().bindTo(Metrics.globalRegistry);
         }
 
-        log.debugf("Configuring root registry : %s", quarkusRegistry);
-        Instance<NamingConvention> convention = Arc.container().beanManager().createInstance()
-                .select(NamingConvention.class);
-        if (convention.isResolvable()) {
-            quarkusRegistry.config().namingConvention(convention.get());
-        }
-
-        // Binders must be last, apply to "top-level" registry
-        Instance<MeterBinder> allBinders = Arc.container().beanManager().createInstance().select(MeterBinder.class,
-                Any.Literal.INSTANCE);
-        for (MeterBinder binder : allBinders) {
-            binder.bindTo(quarkusRegistry);
-        }
-
-        // Add the current root registry to the global composite
-        Metrics.addRegistry(quarkusRegistry);
-        log.debug("Global metrics registry initialized");
+        // Discover and bind MeterBinders (includes annotated gauges, etc)
+        // This must be done at runtime. If done before backend registries are
+        // configured, some measurements may be missed.
+        Instance<MeterBinder> allBinders = beanManager.createInstance()
+                .select(MeterBinder.class, Any.Literal.INSTANCE);
+        allBinders.forEach(x -> x.bindTo(Metrics.globalRegistry));
 
         context.addShutdownTask(new Runnable() {
             @Override
             public void run() {
-                quarkusRegistry.close();
-
-                // Remove the CDI root registry from the global composite
-                log.debug("Root registry removed from global registry");
-                Metrics.removeRegistry(quarkusRegistry);
+                Collection<MeterRegistry> cleanup = new ArrayList<>(Metrics.globalRegistry.getRegistries());
+                cleanup.forEach(x -> {
+                    x.close();
+                    Metrics.removeRegistry(x);
+                });
             }
         });
+    }
+
+    void applyMeterFilters(MeterRegistry registry, Instance<MeterFilter> globalFilters, List<MeterFilter> classFilters) {
+        // Apply global filters to the registry
+        if (!globalFilters.isUnsatisfied()) {
+            for (MeterFilter generalFilter : globalFilters) {
+                registry.config().meterFilter(generalFilter);
+            }
+        }
+
+        // Apply type/class-specific MeterFilters, if any
+        if (classFilters != null) {
+            for (MeterFilter meterFilter : classFilters) {
+                registry.config().meterFilter(meterFilter);
+            }
+        }
     }
 
     public static Map<String, String> captureProperties(Config config, String prefix) {
@@ -160,13 +178,12 @@ public class MicrometerRecorder {
     }
 
     public static Class<?> getClassForName(String classname) {
+        Class<?> clazz = null;
         try {
-            log.debug("getClass: TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname);
-            return Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
+            clazz = Class.forName(classname, false, Thread.currentThread().getContextClassLoader());
         } catch (ClassNotFoundException e) {
-            log.debug("getClass: TCCL: " + Thread.currentThread().getContextClassLoader() + " ## " + classname + ": false");
-            return null;
         }
+        log.debugf("getClass: TCCL: %s ## %s : %s", Thread.currentThread().getContextClassLoader(), classname, (clazz != null));
+        return clazz;
     }
-
 }

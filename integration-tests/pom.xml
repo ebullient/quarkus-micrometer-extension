@@ -37,6 +37,7 @@
   <modules>
     <module>jmx</module>
     <module>prometheus</module>
+    <module>mp-metrics</module>
   </modules>
 
   <dependencies>
