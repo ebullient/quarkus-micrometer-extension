@@ -15,7 +15,7 @@ import io.quarkus.arc.ArcInvocationContext;
 
 @Singleton
 @SuppressWarnings("unused")
-class MpMetricsRegistry {
+class MpMetricsRegistryProducer {
     @Produces
     @Singleton
     public MetricRegistryAdapter produceRegistry(MeterRegistry registry) {

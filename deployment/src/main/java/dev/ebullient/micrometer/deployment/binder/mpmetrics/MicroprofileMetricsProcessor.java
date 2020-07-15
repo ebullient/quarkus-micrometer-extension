@@ -57,7 +57,7 @@ public class MicroprofileMetricsProcessor {
                 .addBeanClass(MetricDotNames.COUNTED_INTERCEPTOR.toString())
                 .addBeanClass(MetricDotNames.INJECTED_METRIC_PRODUCER.toString())
                 .addBeanClass(MetricDotNames.TIMED_INTERCEPTOR.toString())
-                .addBeanClass(MetricDotNames.MP_METRICS_REGISTRY.toString())
+                .addBeanClass(MetricDotNames.MP_METRICS_REGISTRY_PRODUCER.toString())
                 .build();
     }
 

@@ -41,7 +41,7 @@ class TimedInterceptor {
     }
 
     Object time(InvocationContext context, String methodName) throws Exception {
-        Timed annotation = MpMetricsRegistry.getAnnotation(context, Timed.class);
+        Timed annotation = MpMetricsRegistryProducer.getAnnotation(context, Timed.class);
         if (annotation != null) {
             MpMetadata metadata = new MpMetadata(annotation.name().replace("<method>", methodName),
                     annotation.description().replace("<method>", methodName),

@@ -2,6 +2,7 @@ package dev.ebullient.it.micrometer.mpmetrics;
 
 import java.util.concurrent.atomic.LongAccumulator;
 
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -15,12 +16,13 @@ public class PrimeResource {
 
     private LongAccumulator highestPrimeSoFar = new LongAccumulator(Long::max, 2);
 
+    @Inject
     CountedInstance countedResource;
+
     InjectedInstance injectedMetrics;
 
     @Metered
-    PrimeResource(CountedInstance countedResource, InjectedInstance injectedMetrics) {
-        this.countedResource = countedResource;
+    PrimeResource(InjectedInstance injectedMetrics) {
         this.injectedMetrics = injectedMetrics;
     }
 

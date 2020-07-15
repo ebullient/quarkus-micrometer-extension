@@ -58,8 +58,8 @@ public class MetricDotNames {
             .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.InjectedMetricProducer");
     static final DotName TIMED_INTERCEPTOR = DotName
             .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.TimedInterceptor");
-    static final DotName MP_METRICS_REGISTRY = DotName
-            .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.MpMetricsRegistry");
+    static final DotName MP_METRICS_REGISTRY_PRODUCER = DotName
+            .createSimple("dev.ebullient.micrometer.runtime.binder.mpmetrics.MpMetricsRegistryProducer");
 
     /**
      * @param annotations

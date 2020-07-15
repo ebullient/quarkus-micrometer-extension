@@ -38,7 +38,7 @@ class ConcurrentGaugeInterceptor {
     }
 
     Object cGauge(InvocationContext context, String methodName) throws Exception {
-        ConcurrentGauge annotation = MpMetricsRegistry.getAnnotation(context, ConcurrentGauge.class);
+        ConcurrentGauge annotation = MpMetricsRegistryProducer.getAnnotation(context, ConcurrentGauge.class);
         if (annotation != null) {
             MpMetadata metadata = new MpMetadata(annotation.name().replace("<method>", methodName),
                     annotation.description().replace("<method>", methodName),

@@ -39,7 +39,7 @@ class CountedInterceptor {
     }
 
     Object increment(InvocationContext context, String methodName) throws Exception {
-        Counted annotation = MpMetricsRegistry.getAnnotation(context, Counted.class);
+        Counted annotation = MpMetricsRegistryProducer.getAnnotation(context, Counted.class);
         if (annotation != null) {
             MpMetadata metadata = new MpMetadata(annotation.name().replace("<method>", methodName),
                     annotation.description().replace("<method>", methodName),

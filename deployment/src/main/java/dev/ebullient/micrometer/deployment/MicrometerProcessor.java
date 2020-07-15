@@ -19,8 +19,6 @@ import dev.ebullient.micrometer.runtime.CompositeRegistryCreator;
 import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
 import dev.ebullient.micrometer.runtime.MeterFilterConstraints;
 import dev.ebullient.micrometer.runtime.MicrometerRecorder;
-import dev.ebullient.micrometer.runtime.binder.JvmMetricsProvider;
-import dev.ebullient.micrometer.runtime.binder.SystemMetricsProvider;
 import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
@@ -66,8 +64,6 @@ public class MicrometerProcessor {
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
                 .setUnremovable()
                 .addBeanClass(ClockProvider.class)
-                .addBeanClass(JvmMetricsProvider.class)
-                .addBeanClass(SystemMetricsProvider.class)
                 .addBeanClass(CompositeRegistryCreator.class)
                 .addBeanClass(MeterFilterConstraint.class)
                 .addBeanClass(MeterFilterConstraints.class)
@@ -141,6 +137,7 @@ public class MicrometerProcessor {
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.RUNTIME_INIT)
     void configureRegistry(MicrometerRecorder recorder,
+            MicrometerConfig config,
             RootMeterRegistryBuildItem rootMeterRegistryBuildItem,
             List<MicrometerRegistryProviderBuildItem> providerClassItems,
             ShutdownContextBuildItem shutdownContextBuildItem,
@@ -153,6 +150,6 @@ public class MicrometerProcessor {
         }
 
         // Runtime config at play here: host+port, API keys, etc.
-        recorder.configureRegistries(typeClasses, shutdownContextBuildItem);
+        recorder.configureRegistries(config, typeClasses, shutdownContextBuildItem);
     }
 }

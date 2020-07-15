@@ -13,6 +13,7 @@ import io.vertx.core.VertxOptions;
 public class VertxMeterBinderRecorder {
     private static final Logger log = Logger.getLogger(VertxMeterBinderRecorder.class);
 
+    /* STATIC_INIT */
     public Consumer<VertxOptions> configureMetricsAdapter() {
         return new Consumer<VertxOptions>() {
             @Override
@@ -24,6 +25,7 @@ public class VertxMeterBinderRecorder {
         };
     }
 
+    /* RUNTIME_INIT */
     public void setVertxConfig(VertxConfig config) {
         VertxMeterBinderAdapter binder = Arc.container().instance(VertxMeterBinderAdapter.class).get();
         binder.setVertxConfig(config);

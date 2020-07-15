@@ -93,17 +93,30 @@ public final class MicrometerConfig {
     public static class BinderConfig {
         public VertxConfig vertx;
         public MicroprofileMetricsConfig mpMetrics;
+
+        /**
+         * Micrometer JVM metrics support.
+         * <p>
+         * Micrometer JVM metrics support is enabled by default.
+         */
+        @ConfigItem(defaultValue = "true")
+        public boolean jvm;
+
+        /**
+         * Micrometer System metrics support.
+         * <p>
+         * Micrometer System metrics support is enabled by default.
+         */
+        @ConfigItem(defaultValue = "true")
+        public boolean system;
     }
 
     /** Build / static runtime config for exporters */
     @ConfigGroup
     public static class ExportConfig {
         public DatadogConfig datadog;
-
         public JmxConfig jmx;
-
         public PrometheusConfig prometheus;
-
         public StackdriverConfig stackdriver;
     }
 

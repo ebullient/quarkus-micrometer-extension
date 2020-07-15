@@ -512,16 +512,6 @@ class MetricRegistryAdapter extends MetricRegistry {
         return result;
     }
 
-    private MpMetadata internalGetMetadata(AnnotatedGaugeAdapter annotation) {
-        MpMetadata result = metadataMap.computeIfAbsent(annotation.name(), k -> annotation.getMetadata());
-        if (!result.mergeSameType(annotation)) {
-            throw new IllegalArgumentException(
-                    String.format("Metric %s already defined using a different type (%s)",
-                            annotation.name(), result.getType()));
-        }
-        return result;
-    }
-
     <T> T checkCast(Class<T> type, MpMetadata metadata, MeterHolder o) {
         try {
             return type.cast(o);
