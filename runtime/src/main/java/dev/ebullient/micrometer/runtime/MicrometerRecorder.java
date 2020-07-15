@@ -1,9 +1,9 @@
 package dev.ebullient.micrometer.runtime;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,7 +30,6 @@ import io.micrometer.core.instrument.binder.system.FileDescriptorMetrics;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.binder.system.UptimeMetrics;
 import io.micrometer.core.instrument.config.MeterFilter;
-import io.micrometer.core.instrument.config.NamingConvention;
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.ShutdownContext;
@@ -55,20 +54,14 @@ public class MicrometerRecorder {
         BeanManager beanManager = Arc.container().beanManager();
 
         List<MeterRegistry> allRegistries = new ArrayList<>();
-        Map<Class<? extends MeterRegistry>, NamingConvention> classNamingConvention = new HashMap<>(registryClasses.size());
         Map<Class<? extends MeterRegistry>, List<MeterFilter>> classMeterFilters = new HashMap<>(registryClasses.size());
 
         // Find global/common registry configuration
         Instance<MeterFilter> globalFilters = beanManager.createInstance()
                 .select(MeterFilter.class, Default.Literal.INSTANCE);
 
-        // Discover generic naming convention
-        Instance<NamingConvention> globalConvention = beanManager.createInstance()
-                .select(NamingConvention.class, Default.Literal.INSTANCE);
-
-        // Find MeterFilters and NamingConventions that configure specific registry classes, i.e.:
+        // Find MeterFilters for specific registry classes, i.e.:
         // @MeterFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<MeterFilter> filters
-        // @NamingFilterConstraint(applyTo = DatadogMeterRegistry.class) Instance<NamingConvention> convention
         log.debugf("Configuring Micrometer registries : %s", registryClasses);
         for (Class<? extends MeterRegistry> typeClass : registryClasses) {
             Instance<MeterFilter> classFilters = beanManager.createInstance()
@@ -76,13 +69,6 @@ public class MicrometerRecorder {
             if (!classFilters.isUnsatisfied()) {
                 log.debugf("MeterFilter discovered for %s", typeClass);
                 classMeterFilters.computeIfAbsent(typeClass, k -> new ArrayList<>()).add(classFilters.get());
-            }
-
-            Instance<NamingConvention> classConventions = beanManager.createInstance()
-                    .select(NamingConvention.class, new NamingConventionConstraint.Literal(typeClass));
-            if (!classConventions.isUnsatisfied()) {
-                log.debugf("NamingConvention discovered for %s", typeClass);
-                classNamingConvention.put(typeClass, classConventions.get());
             }
         }
 
@@ -97,7 +83,6 @@ public class MicrometerRecorder {
             // Add & configure non-root registries
             if (registry != Metrics.globalRegistry) {
                 applyMeterFilters(registry, globalFilters, classMeterFilters.get(registry.getClass()));
-                applyNamingConvention(registry, globalConvention, classNamingConvention.get(registry.getClass()));
                 log.debugf("Adding configured registry %s", registry.getClass(), registry);
                 Metrics.globalRegistry.add(registry);
                 allRegistries.add(registry);
@@ -129,22 +114,13 @@ public class MicrometerRecorder {
         context.addShutdownTask(new Runnable() {
             @Override
             public void run() {
-                for(Iterator<MeterRegistry> i = Metrics.globalRegistry.getRegistries().iterator(); i.hasNext(); ) {
-                    MeterRegistry x = i.next();
+                Collection<MeterRegistry> cleanup = new ArrayList<>(Metrics.globalRegistry.getRegistries());
+                cleanup.forEach(x -> {
                     x.close();
                     Metrics.removeRegistry(x);
-                }
+                });
             }
         });
-    }
-
-    void applyNamingConvention(MeterRegistry registry, Instance<NamingConvention> globalConvention,
-            NamingConvention classConvention) {
-        if (classConvention != null) {
-            registry.config().namingConvention(classConvention);
-        } else if (globalConvention.isResolvable()) {
-            registry.config().namingConvention(globalConvention.get());
-        }
     }
 
     void applyMeterFilters(MeterRegistry registry, Instance<MeterFilter> globalFilters, List<MeterFilter> classFilters) {
