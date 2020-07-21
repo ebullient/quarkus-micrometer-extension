@@ -14,6 +14,7 @@ import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 
+import dev.ebullient.micrometer.deployment.export.PrometheusRegistryProcessor;
 import dev.ebullient.micrometer.runtime.ClockProvider;
 import dev.ebullient.micrometer.runtime.CompositeRegistryCreator;
 import dev.ebullient.micrometer.runtime.MeterFilterConstraint;
@@ -32,7 +33,10 @@ import io.quarkus.deployment.annotations.*;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
+import io.quarkus.deployment.metrics.MetricsCapabilityBuildItem;
+import io.quarkus.deployment.metrics.MetricsFactoryConsumerBuildItem;
 import io.quarkus.runtime.RuntimeValue;
+import io.quarkus.runtime.metrics.MetricsFactory;
 
 public class MicrometerProcessor {
     private static final DotName METER_REGISTRY = DotName.createSimple(MeterRegistry.class.getName());
@@ -50,9 +54,23 @@ public class MicrometerProcessor {
         }
     }
 
+    MicrometerConfig mConfig;
+
     @BuildStep(onlyIf = MicrometerEnabled.class)
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
+    }
+
+    @BuildStep(onlyIf = MicrometerEnabled.class, onlyIfNot = PrometheusRegistryProcessor.PrometheusEnabled.class)
+    MetricsCapabilityBuildItem metricsCapabilityBuildItem() {
+        return new MetricsCapabilityBuildItem(x -> MetricsFactory.MICROMETER.equals(x),
+                null);
+    }
+
+    @BuildStep(onlyIf = { MicrometerEnabled.class, PrometheusRegistryProcessor.PrometheusEnabled.class })
+    MetricsCapabilityBuildItem metricsCapabilityPrometheusBuildItem() {
+        return new MetricsCapabilityBuildItem(x -> MetricsFactory.MICROMETER.equals(x),
+                mConfig.export.prometheus.path);
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
@@ -127,11 +145,26 @@ public class MicrometerProcessor {
     @BuildStep(onlyIf = MicrometerEnabled.class)
     @Record(ExecutionTime.STATIC_INIT)
     RootMeterRegistryBuildItem createRootRegistry(MicrometerRecorder recorder,
+            MicrometerConfig config,
             BeanContainerBuildItem beanContainerBuildItem) {
         // BeanContainerBuildItem is present to indicate we call this after Arc is initialized
 
-        RuntimeValue<MeterRegistry> registry = recorder.createRootRegistry();
+        RuntimeValue<MeterRegistry> registry = recorder.createRootRegistry(config);
         return new RootMeterRegistryBuildItem(registry);
+    }
+
+    @BuildStep(onlyIf = MicrometerEnabled.class)
+    @Record(ExecutionTime.STATIC_INIT)
+    void registerExtensionMetrics(MicrometerRecorder recorder,
+            RootMeterRegistryBuildItem rootMeterRegistryBuildItem,
+            List<MetricsFactoryConsumerBuildItem> metricsFactoryConsumerBuildItems) {
+        // RootMeterRegistryBuildItem is present to indicate we call this after the root registry has been initialized
+
+        for (MetricsFactoryConsumerBuildItem item : metricsFactoryConsumerBuildItems) {
+            if (item.executionTime() == ExecutionTime.STATIC_INIT) {
+                recorder.registerMetrics(item.getConsumer());
+            }
+        }
     }
 
     @BuildStep(onlyIf = MicrometerEnabled.class)
@@ -140,9 +173,10 @@ public class MicrometerProcessor {
             MicrometerConfig config,
             RootMeterRegistryBuildItem rootMeterRegistryBuildItem,
             List<MicrometerRegistryProviderBuildItem> providerClassItems,
-            ShutdownContextBuildItem shutdownContextBuildItem,
-            BeanContainerBuildItem beanContainerBuildItem) {
-        // BeanContainerBuildItem is present to indicate we call this after Arc is initialized
+            List<MetricsFactoryConsumerBuildItem> metricsFactoryConsumerBuildItems,
+            List<MicrometerRegistryProviderBuildItem> providerClasses,
+            ShutdownContextBuildItem shutdownContextBuildItem) {
+        // RootMeterRegistryBuildItem is present to indicate we call this after the root registry has been initialized
 
         Set<Class<? extends MeterRegistry>> typeClasses = new HashSet<>();
         for (MicrometerRegistryProviderBuildItem item : providerClassItems) {
@@ -151,5 +185,11 @@ public class MicrometerProcessor {
 
         // Runtime config at play here: host+port, API keys, etc.
         recorder.configureRegistries(config, typeClasses, shutdownContextBuildItem);
+
+        for (MetricsFactoryConsumerBuildItem item : metricsFactoryConsumerBuildItems) {
+            if (item.executionTime() == ExecutionTime.RUNTIME_INIT) {
+                recorder.registerMetrics(item.getConsumer());
+            }
+        }
     }
 }

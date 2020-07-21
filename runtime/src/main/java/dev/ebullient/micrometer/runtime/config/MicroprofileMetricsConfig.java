@@ -14,9 +14,9 @@ public class MicroprofileMetricsConfig implements MicrometerConfig.CapabilityEna
      * Microprofile Metrics support.
      * <p>
      * Support for Microprofile metrics will be enabled if micrometer
-     * support is enabled, and either this value is true. You need to also
+     * support is enabled, and this value is true. You need to also
      * include the microprofile api jar to your dependencies:
-     * 
+     *
      * <pre>
      * &lt;dependency&gt;
      *   &lt;groupId&gt;org.eclipse.microprofile.metrics&lt;/groupId&gt;

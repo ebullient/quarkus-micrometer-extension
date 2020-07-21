@@ -15,7 +15,7 @@ public class MpMetricRegistrationTest {
     static final QuarkusUnitTest config = new QuarkusUnitTest()
             .withConfigurationResource("test-logging.properties")
             .overrideConfigKey("quarkus.micrometer.binder.mp-metrics.enabled", "true")
-            .overrideConfigKey("quarkus.micrometer.binder.vertx.enabled", "false")
+            .overrideConfigKey("quarkus.micrometer.binder-enabled-default", "false")
             .overrideConfigKey("quarkus.micrometer.registry-enabled-default", "false");
 
     @Inject
