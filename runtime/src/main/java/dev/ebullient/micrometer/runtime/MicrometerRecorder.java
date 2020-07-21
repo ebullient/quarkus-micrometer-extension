@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Default;
@@ -34,16 +35,18 @@ import io.quarkus.arc.Arc;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.ShutdownContext;
 import io.quarkus.runtime.annotations.Recorder;
+import io.quarkus.runtime.metrics.MetricsFactory;
 
 @Recorder
 public class MicrometerRecorder {
     private static final Logger log = Logger.getLogger(MicrometerRecorder.class);
     static final int TRIM_POS = "quarkus.micrometer.export.".length();
+    static MicrometerMetricsFactory factory;
 
     /* STATIC_INIT */
-    public RuntimeValue<MeterRegistry> createRootRegistry() {
+    public RuntimeValue<MeterRegistry> createRootRegistry(MicrometerConfig config) {
         VertxMeterBinderAdapter.setMeterRegistry(Metrics.globalRegistry);
-
+        factory = new MicrometerMetricsFactory(config, Metrics.globalRegistry);
         return new RuntimeValue<>(Metrics.globalRegistry);
     }
 
@@ -137,6 +140,9 @@ public class MicrometerRecorder {
                 registry.config().meterFilter(meterFilter);
             }
         }
+    }
+
+    public void registerMetrics(Consumer<MetricsFactory> consumer) {
     }
 
     public static Map<String, String> captureProperties(Config config, String prefix) {

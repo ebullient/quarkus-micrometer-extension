@@ -1,10 +1,10 @@
 package io.quarkus.deployment.metrics;
 
-import java.util.function.Consumer;
-
 import io.quarkus.builder.item.MultiBuildItem;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.runtime.metrics.MetricsFactory;
+
+import java.util.function.Consumer;
 
 /**
  * A metrics provider will iterate over all MetricsFactory consumers,
