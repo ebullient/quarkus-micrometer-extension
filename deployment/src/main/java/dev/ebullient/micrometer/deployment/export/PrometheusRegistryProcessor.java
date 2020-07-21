@@ -28,7 +28,7 @@ public class PrometheusRegistryProcessor {
     static final String REGISTRY_CLASS_NAME = "io.micrometer.prometheus.PrometheusMeterRegistry";
     static final Class<?> REGISTRY_CLASS = MicrometerRecorder.getClassForName(REGISTRY_CLASS_NAME);
 
-    static class PrometheusEnabled implements BooleanSupplier {
+    public static class PrometheusEnabled implements BooleanSupplier {
         MicrometerConfig mConfig;
 
         public boolean getAsBoolean() {
