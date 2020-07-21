@@ -6,6 +6,8 @@ import java.util.regex.Pattern;
 import org.jboss.logging.Logger;
 
 import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.binder.http.Outcome;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -20,13 +22,6 @@ public class VertxMetricsTags {
 
     static final Tag STATUS_UNKNOWN = Tag.of("status", "UNKNOWN");
     static final Tag STATUS_RESET = Tag.of("status", "RESET");
-
-    static final Tag OUTCOME_INFORMATIONAL = Tag.of("outcome", "INFORMATIONAL");
-    static final Tag OUTCOME_SUCCESS = Tag.of("outcome", "SUCCESS");
-    static final Tag OUTCOME_REDIRECTION = Tag.of("outcome", "REDIRECTION");
-    static final Tag OUTCOME_CLIENT_ERROR = Tag.of("outcome", "CLIENT_ERROR");
-    static final Tag OUTCOME_SERVER_ERROR = Tag.of("outcome", "SERVER_ERROR");
-    static final Tag OUTCOME_UNKNOWN = Tag.of("outcome", "UNKNOWN");
 
     static final Tag METHOD_UNKNOWN = Tag.of("method", "UNKNOWN");
 
@@ -48,11 +43,11 @@ public class VertxMetricsTags {
     /**
      * Creates a {@code status} tag based on the status of the given {@code response}.
      *
-     * @param response the HTTP response
+     * @param statusCode the HTTP response code
      * @return the status tag derived from the status of the response
      */
-    public static Tag status(HttpServerResponse response) {
-        return (response != null) ? Tag.of("status", Integer.toString(response.getStatusCode())) : STATUS_UNKNOWN;
+    public static Tag status(int statusCode) {
+        return (statusCode > 0) ? Tag.of("status", Integer.toString(statusCode)) : STATUS_UNKNOWN;
     }
 
     /**
@@ -63,21 +58,22 @@ public class VertxMetricsTags {
      */
     public static Tag outcome(HttpServerResponse response) {
         if (response != null) {
-            int codeFamily = response.getStatusCode() / 100;
-            switch (codeFamily) {
-                case 1:
-                    return OUTCOME_INFORMATIONAL;
-                case 2:
-                    return OUTCOME_SUCCESS;
-                case 3:
-                    return OUTCOME_REDIRECTION;
-                case 4:
-                    return OUTCOME_CLIENT_ERROR;
-                case 5:
-                    return OUTCOME_SERVER_ERROR;
-            }
+            return Outcome.forStatus(response.getStatusCode()).asTag();
         }
-        return OUTCOME_UNKNOWN;
+        return Outcome.UNKNOWN.asTag();
+    }
+
+    /**
+     * Creates an {@code outcome} {@code Tag} derived from the given {@code response}.
+     *
+     * @param response the response
+     * @return the outcome tag
+     */
+    public static Tag outcome(HttpClientResponse response) {
+        if (response != null) {
+            return Outcome.forStatus(response.statusCode()).asTag();
+        }
+        return Outcome.UNKNOWN.asTag();
     }
 
     /**
@@ -88,12 +84,11 @@ public class VertxMetricsTags {
      *
      *
      * @param pathInfo
-     * @param response the response
+     * @param code status code of the response
      * @return the uri tag derived from the request
      */
-    public static Tag uri(String pathInfo, HttpServerResponse response) {
-        if (response != null) {
-            int code = response.getStatusCode();
+    public static Tag uri(String pathInfo, int code) {
+        if (code > 0) {
             if (code / 100 == 3) {
                 return URI_REDIRECTION;
             } else if (code == 404) {

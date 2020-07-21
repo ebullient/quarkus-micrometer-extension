@@ -18,40 +18,44 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import org.jboss.logging.Logger;
 
 import dev.ebullient.micrometer.runtime.config.runtime.VertxConfig;
-import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.LongTaskTimer;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
+import io.micrometer.core.instrument.binder.http.Outcome;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.ServerWebSocket;
-import io.vertx.core.net.SocketAddress;
 import io.vertx.core.spi.metrics.HttpServerMetrics;
-import io.vertx.ext.web.RoutingContext;
 
-public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTaskTimer.Sample, Context> {
+/**
+ * HttpServerMetrics<R, W, S>
+ * <ul>
+ * <li>R for Request metric -- MetricsContext</li>
+ * <li>W for Websocket metric -- LongTaskTimer sample</li>
+ * <li>S for Socket metric -- MetricsContext</li>
+ * </ul>
+ */
+public class VertxHttpServerMetrics extends VertxTcpMetrics
+        implements HttpServerMetrics<MetricsContext, LongTaskTimer.Sample, MetricsContext> {
     static final Logger log = Logger.getLogger(VertxHttpServerMetrics.class);
 
-    static final String METER_HTTP_SOCKET_METRIC = "METER_HTTP_SOCKET_METRIC";
-    static final String METER_HTTP_REQUEST_PATH = "METER_HTTP_REQUEST_PATH";
-    static final String METER_HTTP_REQUEST_SAMPLE = "METER_HTTP_REQUEST_SAMPLE";
-    static final String METER_ROUTING_CONTEXT = "METER_ROUTING_CONTEXT";
-
-    final MeterRegistry registry;
     final List<Pattern> ignorePatterns;
     final List<Pattern> matchPatterns;
 
-    public VertxHttpServerMetrics(MeterRegistry registry, VertxConfig config) {
-        this.registry = registry;
+    final String nameWebsocketConnections;
+    final String nameHttpServerPush;
+    final String nameHttpServerRequests;
+
+    VertxHttpServerMetrics(MeterRegistry registry, VertxConfig config) {
+        super(registry, "http.server");
+        nameWebsocketConnections = "http.server.websocket.connections";
+        nameHttpServerPush = "http.server.push";
+        nameHttpServerRequests = "http.server.requests";
 
         if (config.ignorePatterns.isPresent()) {
             List<String> stringPatterns = config.ignorePatterns.get();
@@ -74,89 +78,6 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
         }
     }
 
-    private void cleanUp(Context source) {
-        source.remove(METER_HTTP_REQUEST_PATH);
-        source.remove(METER_HTTP_REQUEST_SAMPLE);
-        source.remove(METER_ROUTING_CONTEXT);
-        source.remove(METER_HTTP_SOCKET_METRIC);
-    }
-
-    /**
-     * Called when a client has connected, which is applicable for TCP connections.
-     * <p/>
-     *
-     * The remote name of the client is a best effort to provide the name of the
-     * remote host, i.e if the name is specified at creation time, this name will be
-     * used otherwise it will be the remote address.
-     *
-     * @param remoteAddress the remote address of the client
-     * @param remoteName the remote name of the client
-     * @return the socket metric
-     */
-    @Override
-    public Context connected(SocketAddress remoteAddress, String remoteName) {
-        Context context = getCurrentContext("connected");
-        context.put(METER_HTTP_SOCKET_METRIC,
-                LongTaskTimer.builder("http.server.connections").register(registry).start());
-        return context;
-    }
-
-    /**
-     * Called when a client has disconnected, which is applicable for TCP
-     * connections.
-     *
-     * @param socketMetric the socket metric
-     * @param remoteAddress the remote address of the client
-     */
-    @Override
-    public void disconnected(Context socketMetric, SocketAddress remoteAddress) {
-        log.debugf("Disconnected %s", socketMetric);
-        if (socketMetric != null) {
-            LongTaskTimer.Sample sample = (LongTaskTimer.Sample) socketMetric.get(METER_HTTP_SOCKET_METRIC);
-            if (sample != null) {
-                sample.stop();
-            }
-            cleanUp(socketMetric);
-        }
-    }
-
-    /**
-     * Called when bytes have been read
-     *
-     * @param socketMetric the socket metric, null for UDP
-     * @param remoteAddress the remote address which this socket received bytes from
-     * @param numberOfBytes the number of bytes read
-     */
-    @Override
-    public void bytesRead(Context socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
-        DistributionSummary.builder("http.server.bytes.read").register(registry).record(numberOfBytes);
-    }
-
-    /**
-     * Called when bytes have been written
-     *
-     * @param socketMetric the socket metric, null for UDP
-     * @param remoteAddress the remote address which bytes are being written to
-     * @param numberOfBytes the number of bytes written
-     */
-    @Override
-    public void bytesWritten(Context socketMetric, SocketAddress remoteAddress, long numberOfBytes) {
-        DistributionSummary.builder("http.server.bytes.written").register(registry).record(numberOfBytes);
-    }
-
-    /**
-     * Called when exceptions occur for a specific connection.
-     *
-     * @param socketMetric the socket metric, null for UDP
-     * @param remoteAddress the remote address of the connection or null if it's
-     *        datagram/udp
-     * @param t the exception that occurred
-     */
-    @Override
-    public void exceptionOccurred(Context socketMetric, SocketAddress remoteAddress, Throwable t) {
-        registry.counter("http.server.errors", "class", t.getClass().getName()).increment();
-    }
-
     /**
      * Called when an http server response is pushed.
      *
@@ -167,12 +88,13 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      * @return the request metric
      */
     @Override
-    public Context responsePushed(Context socketMetric, HttpMethod method, String uri, HttpServerResponse response) {
+    public MetricsContext responsePushed(MetricsContext socketMetric, HttpMethod method, String uri,
+            HttpServerResponse response) {
         String path = VertxMetricsTags.parseUriPath(matchPatterns, ignorePatterns, uri);
         if (path != null) {
-            registry.counter("http.server.push",
-                    Tags.of(VertxMetricsTags.uri(path, response), VertxMetricsTags.method(method),
-                            VertxMetricsTags.outcome(response), VertxMetricsTags.status(response)))
+            registry.counter(nameHttpServerPush,
+                    Tags.of(VertxMetricsTags.uri(path, response.getStatusCode()), VertxMetricsTags.method(method),
+                            VertxMetricsTags.outcome(response), VertxMetricsTags.status(response.getStatusCode())))
                     .increment();
         }
         return socketMetric;
@@ -188,15 +110,15 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      * @return the request metric
      */
     @Override
-    public Context requestBegin(Context socketMetric, HttpServerRequest request) {
+    public MetricsContext requestBegin(MetricsContext socketMetric, HttpServerRequest request) {
         String path = VertxMetricsTags.parseUriPath(matchPatterns, ignorePatterns, request.uri());
         if (path != null) {
             // Pre-add the request method tag to the sample
-            socketMetric.put(METER_HTTP_REQUEST_SAMPLE,
+            socketMetric.put(MetricsContext.HTTP_REQUEST_SAMPLE,
                     Timer.start(registry).tags(Tags.of(VertxMetricsTags.method(request.method()))));
 
             // remember the path to monitor for use later (maybe a 404 or redirect..)
-            socketMetric.put(METER_HTTP_REQUEST_PATH, path);
+            socketMetric.put(MetricsContext.HTTP_REQUEST_PATH, path);
         }
         return socketMetric;
     }
@@ -208,13 +130,14 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      * @param requestMetric the request metric
      */
     @Override
-    public void requestReset(Context requestMetric) {
-        Timer.Sample sample = requestMetric.get(METER_HTTP_REQUEST_SAMPLE);
+    public void requestReset(MetricsContext requestMetric) {
+        Timer.Sample sample = requestMetric.getValue(MetricsContext.HTTP_REQUEST_SAMPLE);
         if (sample != null) {
-            String requestPath = getRequestPath("requestReset", requestMetric);
+            String requestPath = getServerRequestPath(requestMetric);
             sample.stop(registry,
-                    Timer.builder("http.server.requests").tags(Tags.of(VertxMetricsTags.uri(requestPath, null),
-                            VertxMetricsTags.OUTCOME_CLIENT_ERROR, VertxMetricsTags.STATUS_RESET)));
+                    Timer.builder(nameHttpServerRequests)
+                            .tags(Tags.of(VertxMetricsTags.uri(requestPath, 0),
+                                    Outcome.CLIENT_ERROR.asTag(), VertxMetricsTags.STATUS_RESET)));
         }
     }
 
@@ -225,16 +148,15 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      * @param response the http server request
      */
     @Override
-    public void responseEnd(Context requestMetric, HttpServerResponse response) {
-        Timer.Sample sample = requestMetric.get(METER_HTTP_REQUEST_SAMPLE);
+    public void responseEnd(MetricsContext requestMetric, HttpServerResponse response) {
+        Timer.Sample sample = requestMetric.getValue(MetricsContext.HTTP_REQUEST_SAMPLE);
         if (sample != null) {
-            String requestPath = getRequestPath("responseEnd", requestMetric);
-
-            sample.stop(registry, Timer.builder("http.server.requests")
+            String requestPath = getServerRequestPath(requestMetric);
+            sample.stop(registry, Timer.builder(nameHttpServerRequests)
                     .tags(Tags.of(
-                            VertxMetricsTags.uri(requestPath, response),
+                            VertxMetricsTags.uri(requestPath, response.getStatusCode()),
                             VertxMetricsTags.outcome(response),
-                            VertxMetricsTags.status(response))));
+                            VertxMetricsTags.status(response.getStatusCode()))));
         }
     }
 
@@ -247,12 +169,14 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
      * @return the server web socket metric
      */
     @Override
-    public LongTaskTimer.Sample connected(Context socketMetric, Context requestMetric,
+    public LongTaskTimer.Sample connected(MetricsContext socketMetric, MetricsContext requestMetric,
             ServerWebSocket serverWebSocket) {
-        String path = getRequestPath("connected", socketMetric);
+        String path = getServerRequestPath(socketMetric);
         if (path != null) {
-            return LongTaskTimer.builder("http.server.websocket.connections")
-                    .tags(Tags.of(VertxMetricsTags.uri(path, null))).register(registry).start();
+            return LongTaskTimer.builder(nameWebsocketConnections)
+                    .tags(Tags.of(VertxMetricsTags.uri(path, 0)))
+                    .register(registry)
+                    .start();
         }
         return null;
     }
@@ -269,27 +193,12 @@ public class VertxHttpServerMetrics implements HttpServerMetrics<Context, LongTa
         }
     }
 
-    private String getRequestPath(String caller, Context source) {
-        RoutingContext rctx = getRoutingContext(caller, source);
-        if (rctx != null) {
-            String path = rctx.get(METER_HTTP_REQUEST_PATH);
-            if (path != null) {
-                log.debugf("Using path from routing context %s", path);
-                return path;
-            }
+    private String getServerRequestPath(MetricsContext source) {
+        String path = source.getFromRoutingContext(MetricsContext.HTTP_REQUEST_PATH);
+        if (path != null) {
+            log.debugf("Using path from routing context %s", path);
+            return path;
         }
-        return source.get(METER_HTTP_REQUEST_PATH);
-    }
-
-    private RoutingContext getRoutingContext(String caller, Context source) {
-        @Nullable
-        RoutingContext routingContext = source.get(METER_ROUTING_CONTEXT);
-        return routingContext;
-    }
-
-    private Context getCurrentContext(String caller) {
-        @Nullable
-        Context context = Vertx.currentContext();
-        return context;
+        return source.getValue(MetricsContext.HTTP_REQUEST_PATH);
     }
 }

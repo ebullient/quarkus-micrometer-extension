@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnJre;
 import org.junit.jupiter.api.condition.JRE;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import io.micrometer.core.instrument.Tag;
@@ -56,62 +55,25 @@ public class VertxMetricsTagsTest {
 
     @Test
     public void testStatus() {
-        Mockito.when(response.getStatusCode()).thenReturn(200);
-        Assertions.assertEquals(Tag.of("status", "200"), VertxMetricsTags.status(response));
-
-        Mockito.when(response.getStatusCode()).thenReturn(301);
-        Assertions.assertEquals(Tag.of("status", "301"), VertxMetricsTags.status(response));
-
-        Mockito.when(response.getStatusCode()).thenReturn(304);
-        Assertions.assertEquals(Tag.of("status", "304"), VertxMetricsTags.status(response));
+        Assertions.assertEquals(Tag.of("status", "200"), VertxMetricsTags.status(200));
+        Assertions.assertEquals(Tag.of("status", "301"), VertxMetricsTags.status(301));
+        Assertions.assertEquals(Tag.of("status", "304"), VertxMetricsTags.status(304));
+        Assertions.assertEquals(Tag.of("status", "404"), VertxMetricsTags.status(404));
     }
 
     @Test
     public void testUriRedirect() {
-        Mockito.when(response.getStatusCode()).thenReturn(301);
-        Assertions.assertEquals(VertxMetricsTags.URI_REDIRECTION, VertxMetricsTags.uri("/moved", response));
-
-        Mockito.when(response.getStatusCode()).thenReturn(302);
-        Assertions.assertEquals(VertxMetricsTags.URI_REDIRECTION, VertxMetricsTags.uri("/moved", response));
-
-        Mockito.when(response.getStatusCode()).thenReturn(304);
-        Assertions.assertEquals(VertxMetricsTags.URI_REDIRECTION, VertxMetricsTags.uri("/moved", response));
+        Assertions.assertEquals(VertxMetricsTags.URI_REDIRECTION, VertxMetricsTags.uri("/moved", 301));
+        Assertions.assertEquals(VertxMetricsTags.URI_REDIRECTION, VertxMetricsTags.uri("/moved", 302));
+        Assertions.assertEquals(VertxMetricsTags.URI_REDIRECTION, VertxMetricsTags.uri("/moved", 304));
     }
 
     @Test
-    public void testUriNotFound() {
-        Mockito.when(response.getStatusCode()).thenReturn(404);
-        Assertions.assertEquals(VertxMetricsTags.URI_NOT_FOUND, VertxMetricsTags.uri("/invalid", response));
-        Assertions.assertEquals(Tag.of("status", "404"), VertxMetricsTags.status(response));
+    public void testUriDefaults() {
+        Assertions.assertEquals(VertxMetricsTags.URI_ROOT, VertxMetricsTags.uri("/", 200));
+        Assertions.assertEquals(Tag.of("uri", "/known/ok"), VertxMetricsTags.uri("/known/ok", 200));
+        Assertions.assertEquals(VertxMetricsTags.URI_NOT_FOUND, VertxMetricsTags.uri("/invalid", 404));
+        Assertions.assertEquals(Tag.of("uri", "/known/bad/request"), VertxMetricsTags.uri("/known/bad/request", 400));
+        Assertions.assertEquals(Tag.of("uri", "/known/server/error"), VertxMetricsTags.uri("/known/server/error", 500));
     }
-
-    //    @Test
-    //    public void testUriRootOk() {
-    //        Mockito.when(response.getStatusCode()).thenReturn(200);
-    //        Assertions.assertEquals(HttpMetricsTags.URI_ROOT, HttpMetricsTags.uri(config, "/", response));
-    //    }
-
-    //    @Test
-    //    public void testUriDefaults() {
-    //        Mockito.when(response.getStatusCode()).thenReturn(200);
-    //        Assertions.assertEquals(Tag.of("uri", "/known"), HttpMetricsTags.uri(config, "/known/ok", response));
-    //
-    //        Mockito.when(response.getStatusCode()).thenReturn(400);
-    //        Assertions.assertEquals(Tag.of("uri", "/known"), HttpMetricsTags.uri(config, "/known/bad/request", response));
-    //
-    //        Mockito.when(response.getStatusCode()).thenReturn(500);
-    //        Assertions.assertEquals(Tag.of("uri", "/known"), HttpMetricsTags.uri(config, "/known/server/error", response));
-    //    }
-
-    //    @Test
-    //    public void testUriWhitelistMatch() {
-    //        Mockito.when(response.getStatusCode()).thenReturn(200);
-    //    }
-    //
-    //    @Test
-    //    public void testUriIgnore() {
-    //        Mockito.when(response.getStatusCode()).thenReturn(200);
-    //
-    //    }
-
 }
