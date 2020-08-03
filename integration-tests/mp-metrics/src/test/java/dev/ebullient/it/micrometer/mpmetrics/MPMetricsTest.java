@@ -64,7 +64,7 @@ class MPMetricsTest {
                 .body(containsString(
                         "dev_ebullient_it_micrometer_mpmetrics_CountedInstance_countPrimes_total{scope=\"application\",} 2.0"))
                 .body(containsString(
-                        "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar{scope=\"application\",} 887.0"))
+                        "highestPrimeNumberSoFar 887.0"))
 
                 // the counter associated with a timed method should have been removed
                 .body(not(containsString("dev_ebullient_it_micrometer_mpmetrics_PrimeResource_checkPrime")));
@@ -92,7 +92,7 @@ class MPMetricsTest {
                 .body(containsString(
                         "dev_ebullient_it_micrometer_mpmetrics_CountedInstance_countPrimes_total{scope=\"application\",} 2.0"))
                 .body(containsString(
-                        "dev_ebullient_it_micrometer_mpmetrics_PrimeResource_highestPrimeNumberSoFar{scope=\"application\",} 887.0"))
+                        "highestPrimeNumberSoFar 887.0"))
                 .body(containsString(
                         "dev_ebullient_it_micrometer_mpmetrics_InjectedInstance_notPrime_total{scope=\"application\",}"));
     }
