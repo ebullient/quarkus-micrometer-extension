@@ -98,9 +98,9 @@ Each registry has its own optional attribute to determine whether or not support
 
 * If the registry class is found on the classpath
   * If the Micrometer Metrics extension (as a whole) is enabled
-    * If `quarkus.micrometer.exporter.*.enabled` is true, the registry is enabled
-    * If `quarkus.micrometer.exporter.*.enabled` is false, the registry is disabled
-    * If `quarkus.micrometer.exporter.*.enabled` is unset AND `quarkus.micrometer.registry-enabled-default` is true, then the registry is enabled.
+    * If `quarkus.micrometer.export.*.enabled` is true, the registry is enabled
+    * If `quarkus.micrometer.export.*.enabled` is false, the registry is disabled
+    * If `quarkus.micrometer.export.*.enabled` is unset AND `quarkus.micrometer.registry-enabled-default` is true, then the registry is enabled.
 
 In most cases, you'll only have one registry on the classpath, so none of this will matter and it will all just work.
 
@@ -109,7 +109,7 @@ In most cases, you'll only have one registry on the classpath, so none of this w
 To disable the prometheus registry:
 
 ```properties
-quarkus.micrometer.exporter.prometheus.enabled=false
+quarkus.micrometer.export.prometheus.enabled=false
 ```
 
 ### Using Stackdriver
@@ -119,19 +119,19 @@ quarkus.micrometer.exporter.prometheus.enabled=false
 To disable StackDriver support:
 
 ```properties
-quarkus.micrometer.exporter.stackdriver.enabled=false
+quarkus.micrometer.export.stackdriver.enabled=false
 ```
 
 Set the StackDriver project id:
 
 ```properties
-quarkus.micrometer.exporter.stackdriver.project-id=MY_PROJECT_ID
+quarkus.micrometer.export.stackdriver.project-id=MY_PROJECT_ID
 ```
 
 To prevent StackDriver metrics from being published in some environments (while leaving stackdriver support as a whole enabled), use:
 
 ```properties
-quarkus.micrometer.exporter.stackdriver.publish=false
+quarkus.micrometer.export.stackdriver.publish=false
 ```
 
 ### Using Datadog
@@ -139,10 +139,10 @@ quarkus.micrometer.exporter.stackdriver.publish=false
 Datadog configuration is structured in the same way that Stackdriver configuration is:
 
 ```properties
-quarkus.micrometer.exporter.datadog.enabled=false
+quarkus.micrometer.export.datadog.enabled=false
 
 # Define the key used to push data using the Datadog API
-quarkus.micrometer.exporter.datadog.apiKey=YOUR_KEY
+quarkus.micrometer.export.datadog.apiKey=YOUR_KEY
 ```
 
 To prevent Datadog metrics from being published in some environments (while leaving Datadog support as a whole enabled), use:
