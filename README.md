@@ -23,22 +23,22 @@ Packages are published using Jitpack:
 
 Set the package version properties
 
-* Latest Release (1.6.1):
+* Latest Release (1.6.1.1):
 
   ```xml
   <properties>
-    <quarkus-micrometer-extension.version>1.6.1</quarkus-micrometer-extension.version>
+    <quarkus-micrometer-extension.version>1.6.1.1</quarkus-micrometer-extension.version>
     <quarkus.version>1.6.1.Final</quarkus.version>
     <micrometer.version>1.5.2</micrometer.version>
   </properties>
   ```
 
-* Snapshot (most recent patches):
+* Snapshot (most recent patches + 1.7 branch):
 
   ```xml
   <properties>
     <quarkus-micrometer-extension.version>1.7.0-SNAPSHOT</quarkus-micrometer-extension.version>
-    <quarkus.version>1.6.1.Final</quarkus.version>
+    <quarkus.version>1.7.0.CR1</quarkus.version>
     <micrometer.version>1.5.2</micrometer.version>
   </properties>
   ```
