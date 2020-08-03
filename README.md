@@ -23,12 +23,12 @@ Packages are published using Jitpack:
 
 Set the package version properties
 
-* Latest Release (1.6.0):
+* Latest Release (1.6.1):
 
   ```xml
   <properties>
-    <quarkus-micrometer-extension.version>1.6.0</quarkus-micrometer-extension.version>
-    <quarkus.version>1.6.0.Final</quarkus.version>
+    <quarkus-micrometer-extension.version>1.6.1</quarkus-micrometer-extension.version>
+    <quarkus.version>1.6.1.Final</quarkus.version>
     <micrometer.version>1.5.2</micrometer.version>
   </properties>
   ```
@@ -37,8 +37,8 @@ Set the package version properties
 
   ```xml
   <properties>
-    <quarkus-micrometer-extension.version>1.6.1-SNAPSHOT</quarkus-micrometer-extension.version>
-    <quarkus.version>1.6.0.Final</quarkus.version>
+    <quarkus-micrometer-extension.version>1.7.0-SNAPSHOT</quarkus-micrometer-extension.version>
+    <quarkus.version>1.6.1.Final</quarkus.version>
     <micrometer.version>1.5.2</micrometer.version>
   </properties>
   ```
@@ -61,12 +61,6 @@ Add dependencies:
       <groupId>dev.ebullient.quarkus-micrometer-extension</groupId>
       <artifactId>quarkus-micrometer</artifactId>
       <version>${quarkus-micrometer-extension.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-core</artifactId>
-      <version>${micrometer.version}</version>
     </dependency>
 
     <!-- use stackdriver, datadog, jmx, prometheus etc. as appropriate. Help welcome to enable more! -->
