@@ -27,9 +27,9 @@
   <url>https://github.com/ebullient/quarkus-micrometer-extension</url>
 
   <properties>
-    <revision>1.6.1-SNAPSHOT</revision>
+    <revision>1.6.1</revision>
 
-    <quarkus.version>1.6.0.Final</quarkus.version>
+    <quarkus.version>1.6.1.Final</quarkus.version>
     <micrometer.version>1.5.2</micrometer.version>
 
     <flatten-maven-plugin.version>1.2.1</flatten-maven-plugin.version>
