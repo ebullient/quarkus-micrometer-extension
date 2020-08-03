@@ -17,6 +17,7 @@ import javax.enterprise.inject.spi.BeanManager;
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
+import dev.ebullient.micrometer.runtime.binder.JvmInfoMetrics;
 import dev.ebullient.micrometer.runtime.binder.vertx.VertxMeterBinderAdapter;
 import dev.ebullient.micrometer.runtime.config.MicrometerConfig;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -95,6 +96,7 @@ public class MicrometerRecorder {
             new JvmHeapPressureMetrics().bindTo(Metrics.globalRegistry);
             new JvmMemoryMetrics().bindTo(Metrics.globalRegistry);
             new JvmThreadMetrics().bindTo(Metrics.globalRegistry);
+            new JvmInfoMetrics().bindTo(Metrics.globalRegistry);
         }
 
         // System
