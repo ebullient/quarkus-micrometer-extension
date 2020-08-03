@@ -81,9 +81,11 @@ class PrometheusMetricsRegistryTest {
                 .statusCode(200)
 
                 // Prometheus body has ALL THE THINGS in no particular order
+                .body(containsString("jvm_info"))
 
                 .body(containsString("registry=\"prometheus\""))
                 .body(containsString("env=\"test\""))
+
                 .body(containsString("http_server_requests"))
 
                 .body(containsString("status=\"404\""))
