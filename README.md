@@ -39,7 +39,7 @@ Set the package version properties
   <properties>
     <quarkus-micrometer-extension.version>1.7.0-SNAPSHOT</quarkus-micrometer-extension.version>
     <quarkus.version>1.7.0.CR1</quarkus.version>
-    <micrometer.version>1.5.2</micrometer.version>
+    <micrometer.version>1.5.3</micrometer.version>
   </properties>
   ```
 
@@ -49,7 +49,7 @@ Set the package version properties
   <properties>
     <quarkus-micrometer-extension.version>999-SNAPSHOT</quarkus-micrometer-extension.version>
     <quarkus.version>999-SNAPSHOT</quarkus.version>
-    <micrometer.version>1.5.2</micrometer.version>
+    <micrometer.version>1.5.3</micrometer.version>
   </properties>
   ```
 
