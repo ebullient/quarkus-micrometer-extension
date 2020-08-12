@@ -18,7 +18,7 @@ import io.quarkus.deployment.annotations.Record;
 import io.quarkus.vertx.http.deployment.RouteBuildItem;
 
 /**
- * Add support for the Promethus Meter Registry. Note that the registry may not
+ * Add support for the Prometheus Meter Registry. Note that the registry may not
  * be available at deployment time for some projects: Avoid direct class
  * references.
  */
@@ -58,10 +58,10 @@ public class PrometheusRegistryProcessor {
         log.debug("PROMETHEUS CONFIG: " + pConfig);
 
         // Exact match for resources matched to the root path
-        routes.produce(new RouteBuildItem(pConfig.path, recorder.getHandler()));
+        routes.produce(new RouteBuildItem(recorder.route(pConfig.path), recorder.getHandler()));
 
         // Match paths that begin with the deployment path
         String matchPath = pConfig.path + (pConfig.path.endsWith("/") ? "*" : "/*");
-        routes.produce(new RouteBuildItem(matchPath, recorder.getHandler()));
+        routes.produce(new RouteBuildItem(recorder.route(matchPath), recorder.getHandler()));
     }
 }
