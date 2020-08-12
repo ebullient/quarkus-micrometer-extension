@@ -29,7 +29,7 @@
   <properties>
     <revision>1.7.0-SNAPSHOT</revision>
 
-    <quarkus.version>1.7.0.CR1</quarkus.version>
+    <quarkus.version>1.7.0.CR2</quarkus.version>
     <micrometer.version>1.5.3</micrometer.version>
 
     <flatten-maven-plugin.version>1.2.1</flatten-maven-plugin.version>
