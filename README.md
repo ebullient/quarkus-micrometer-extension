@@ -8,6 +8,29 @@ Most things should "just work" after enabling the extension. You'll need to:
 2. Include micrometer-core if you are using micrometer APIs
 3. Include the micromter registry of your choice (e.g. micrometer-registry-prometheus)
 
+## NOTE: Now a proper Quarkus extension
+
+As of Quarkus 1.8, a newer version of this extension can be obtained using the standard quarkus extension mechanism.
+
+Assuming an existing project using Quarkus 1.8, add the following dependencies:
+
+```xml
+  <dependencies>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-micrometer</artifactId>
+    </dependency>
+
+    <!-- use stackdriver, datadog, jmx, prometheus etc. as appropriate. Help welcome to enable more! -->
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+  </dependencies>
+```
+
+And you're good to go!
+
 ## Project dependencies
 
 Packages are published using Jitpack:
